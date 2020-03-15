@@ -11,6 +11,7 @@ from dataframe_expressions.DataFrame import DataFrame, Column
 #  Operations between columns and columns
 #  Fluent function calls
 #  Filtering
+#  numpy math functions (??)
 
 def test_empty_ctor():
     DataFrame()
