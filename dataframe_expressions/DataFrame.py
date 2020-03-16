@@ -1,24 +1,28 @@
 import ast
 from typing import Optional, Any, Union
 
+
 class DataFrameTypeError(Exception):
     '''Thrown when we don't understand the type in an expression'''
-    def __init__ (self, message):
+    def __init__(self, message):
         Exception.__init__(self, message)
+
 
 class ast_DataFrame(ast.AST):
     '''Ast that holds onto a DataFrame reference'''
-    def __init__ (self, dataframe):
+    def __init__(self, dataframe):
         ast.AST.__init__(self)
-        self._fields=()
+        self._fields = ()
         self.dataframe = dataframe
+
 
 class ast_Column(ast.AST):
     '''Ast that holds onto a DataFrame reference'''
-    def __init__ (self, col):
+    def __init__(self, col):
         ast.AST.__init__(self)
-        self._fields=()
+        self._fields = ()
         self.column = col
+
 
 class Column:
     '''
@@ -73,6 +77,23 @@ class DataFrame:
         '''A filtering operation of some sort'''
         assert isinstance(expr, DataFrame) or isinstance(expr, Column), "Filtering a data frame must be done by a DataFrame expression (type: DataFrame or Column)"
         return DataFrame(self, None, expr)
+
+    def __array_ufunc__(ufunc, method, *inputs, **kwargs):
+        '''Take over a numpy or similar execution by turning it into a function call'''
+        visitor = getattr(ufunc, method.__name__, None)
+        assert visitor is not None, f'Unable to call function "{ufunc.__name__}" on dataframe.'
+        return visitor(*inputs[2:], **kwargs)
+
+    def __call__(self, *inputs, **kwargs):
+        '''
+        Someone is trying to turn an attribute into a funciton. That is fine, but it takes some fancy footwork on our part.
+        Specifically, what we were thinking of as an attribute is actuall a function call. So we have to haul that back
+        to undo the attribute and turn it into a funciton call.
+        '''
+        assert self.child_expr is not None, 'Cannot call a DataFrame directly - must be a funciton name!'
+        assert isinstance(self.child_expr, ast.Attribute), 'Cannot call a DataFrame directly - must be a function name!'
+        child_expr = ast.Call(func=self.child_expr, args=[_term_to_ast(a) for a in inputs], keywords=[ast.keyword(arg=k, value=_term_to_ast(v)) for k, v in kwargs.items()])
+        return DataFrame(self.parent, child_expr)
 
     def __binary_operator_compare(self, operator: ast.AST, other: Any) -> Column:
         '''Build a column for a binary operation that results in a column of single values.'''

@@ -37,17 +37,38 @@ The basic 4 binary math operators work as well
 d1 = d.x/1000.0
 ```
 
+Extension functions are supported:
+
+```
+d1 = d.x.count()
+```
+
+And, much the same way, `numpy` functions are supported:
+
+```
+import numpy as np
+d1 = np.sin(d.x)
+```
+
+Internally, this is rendered as `d.x.sin()`.
+
 ## Usage with a backend
 
 While the above shows you want the libaray can track, it says nothing about how you use it. The following steps are necessary.
 
-NO CLUE
+NO CLUE... Yet.
 
 ## Technology Choices
 
 Not sure these are the right thing, but...
 
 - Using the python `ast` module to record expressions. Mostly because it is already complete and there are nice visitor objects that make walking it easy. Down side is that python does change the ast every few versions.
+
+- An attribute on DataFrame refers to some data. A method call, however, does not refer to data. So, you can say `d.pt` to get at the pt, but if you said `d.pt()` that would be "bad". The reason for this is so that we can add functions that do things in a fluent way. For example, `d.jets.count()` to coune the number of jets. Or `d.jets[d.jets.pt > 100].count()` or similar.
+
+## Architecture Questions
+
+This isn't an exhaustive list. Just a list of some choices I had to make to get this off the ground.
 
 - Should there be a `Column` and `Dataset`?
 
