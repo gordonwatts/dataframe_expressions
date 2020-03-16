@@ -31,6 +31,12 @@ d2 = d1[d1.x < 20]
 
 And `d2` will be identical to d1 of the last example.
 
+The basic 4 binary math operators work as well
+
+```
+d1 = d.x/1000.0
+```
+
 ## Usage with a backend
 
 While the above shows you want the libaray can track, it says nothing about how you use it. The following steps are necessary.

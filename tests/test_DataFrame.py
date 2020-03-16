@@ -3,13 +3,11 @@ import ast
 from dataframe_expressions.DataFrame import DataFrame, Column, DataFrameTypeError
 
 # TODO:
-#  the operator "in" (contains)? to see if one jet is in aother collection?
-#  the operator len
-#  Basic math operators (https://docs.python.org/3/reference/datamodel.html?highlight=__add__#emulating-numeric-types)
-#  Operations between columns and dataframes
-#  Operations between columns and columns
 #  Fluent function calls
 #  numpy math functions (??)
+#  Advanced math operators (https://docs.python.org/3/reference/datamodel.html?highlight=__add__#emulating-numeric-types)
+#  the operator "in" (contains)? to see if one jet is in aother collection?
+#  the operator len
 
 def test_empty_ctor():
     DataFrame()
@@ -86,3 +84,27 @@ def test_masking_df():
     assert d1.child_expr == None
     assert isinstance(d1.filter, Column)
     assert ast.dump(d1.filter.child_expr) == "Compare(left=Name(id='p', ctx=Load()), ops=[Gt()], comparators=[Num(n=10)])"
+
+def test_math_division():
+    d = DataFrame()
+    d1 = d.x/1000
+    assert d1.filter is None
+    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
+
+def test_math_mult():
+    d = DataFrame()
+    d1 = d.x*1000
+    assert d1.filter is None
+    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Mult(), right=Num(n=1000))"
+
+def test_math_sub():
+    d = DataFrame()
+    d1 = d.x-1000
+    assert d1.filter is None
+    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Sub(), right=Num(n=1000))"
+
+def test_math_add():
+    d = DataFrame()
+    d1 = d.x+1000
+    assert d1.filter is None
+    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Add(), right=Num(n=1000))"

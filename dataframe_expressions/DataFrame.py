@@ -74,7 +74,6 @@ class DataFrame:
         assert isinstance(expr, DataFrame) or isinstance(expr, Column), "Filtering a data frame must be done by a DataFrame expression (type: DataFrame or Column)"
         return DataFrame(self, None, expr)
 
-
     def __binary_operator_compare(self, operator: ast.AST, other: Any) -> Column:
         '''Build a column for a binary operation that results in a column of single values.'''
 
@@ -83,6 +82,15 @@ class DataFrame:
         other_ast = _term_to_ast(other)
         compare_ast = ast.Compare(left=ast.Name(id='p', ctx=ast.Load()), ops=[operator], comparators=[other_ast])
         return Column(type(bool), self, compare_ast)
+
+    def __binary_operator(self, operator: ast.AST, other: Any):
+        '''Build a column for a binary operation that results in a column of single values.'''
+
+        # How we do this depends on what other is. We need to encode whatever it is in the AST
+        # so that it can be properly unpacked.
+        other_ast = _term_to_ast(other)
+        operated = ast.BinOp(left=ast.Name(id='p', ctx=ast.Load()), op=operator, right=other_ast)
+        return DataFrame(self, operated)
 
     def __lt__(self, other) -> Column:
         ''' x < y '''
@@ -107,6 +115,18 @@ class DataFrame:
     def __ge__(self, other) -> Column:
         ''' x < y '''
         return self.__binary_operator_compare(ast.GtE(), other)
+
+    def __truediv__(self, other):
+        return self.__binary_operator(ast.Div(), other)
+
+    def __mul__(self, other):
+        return self.__binary_operator(ast.Mult(), other)
+
+    def __add__(self, other):
+        return self.__binary_operator(ast.Add(), other)
+
+    def __sub__(self, other):
+        return self.__binary_operator(ast.Sub(), other)
 
 def _term_to_ast(term) -> ast.AST:
     '''Return an AST that represents the current term
