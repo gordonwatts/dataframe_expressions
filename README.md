@@ -64,7 +64,7 @@ Not sure these are the right thing, but...
 
 - Using the python `ast` module to record expressions. Mostly because it is already complete and there are nice visitor objects that make walking it easy. Down side is that python does change the ast every few versions.
 
-- An attribute on DataFrame refers to some data. A method call, however, does not refer to data. So, you can say `d.pt` to get at the pt, but if you said `d.pt()` that would be "bad". The reason for this is so that we can add functions that do things in a fluent way. For example, `d.jets.count()` to coune the number of jets. Or `d.jets[d.jets.pt > 100].count()` or similar.
+- An attribute on DataFrame refers to some data. A method call, however, does not refer to data. So, you can say `d.pt` to get at the pt, but if you said `d.pt()` that would be "bad". The reason for this is so that we can add functions that do things in a fluent way. For example, `d.jets.count()` to coune the number of jets. Or `d.jets[d.jets.pt > 100].count()` or similar. Really, the back end can interpret this, but the front-end semantics sort-of make this assumption.
 
 ## Architecture Questions
 
@@ -72,7 +72,7 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
 
 - Should there be a `Column` and `Dataset`?
 
-- Should we allow for "&" and "|" as logical operators, redefining what they mean in python?
+- Should we allow for "&" and "|" as logical operators, redefining what they mean in python? numpy defines several logical operators which should translate, but those aren't implemented yet.
 
 - I currently have a parent as "p" in the expression, but then we have a dataframe ast and column ast - which makes it not needed. Why not just convert to using the same thing to refer to a df in an ast?
 
