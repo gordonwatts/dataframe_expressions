@@ -1,7 +1,7 @@
 # Test the render method
 import ast
 
-from dataframe_expressions import DataFrame, ast_DataFrame, ast_Column, render
+from dataframe_expressions import DataFrame, ast_DataFrame, render
 
 
 def test_render_easy():
@@ -54,5 +54,5 @@ def test_simple_filter():
     assert isinstance(expr, ast_DataFrame)
     assert expr.dataframe is d
     # This line assures that the sub-expressions are the same, allowing
-    # render code to take advantage of this.
+    # render code to take advantage of this.str()
     assert expr is l_value

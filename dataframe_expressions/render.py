@@ -17,7 +17,8 @@ class _parent_subs(ast.NodeTransformer):
             return a
 
 
-def _render_filter(f: Column, seen_datasources: Optional[Dict[DataFrame, ast_DataFrame]] = None) -> ast.AST:
+def _render_filter(f: Column, seen_datasources: Optional[Dict[int, ast_DataFrame]] = None) \
+         -> ast.AST:
     'Render a filter as a result'
 
     # Get the info from the parent.
@@ -30,7 +31,7 @@ def _render_filter(f: Column, seen_datasources: Optional[Dict[DataFrame, ast_Dat
             ast.BoolOp(op=ast.And(), values=[filter, child_filter])
 
 
-def render(d: DataFrame, seen_datasources: Optional[Dict[DataFrame, ast_DataFrame]] = None) \
+def render(d: DataFrame, seen_datasources: Optional[Dict[int, ast_DataFrame]] = None) \
         -> Tuple[ast.AST, Optional[ast.AST]]:
     '''
     Follows the data frame back to the start and renders it in a complete AST.
@@ -54,9 +55,10 @@ def render(d: DataFrame, seen_datasources: Optional[Dict[DataFrame, ast_DataFram
 
     # If we are at the top of the chain, then our return is easy.
     if d.parent is None:
-        if d not in datasources:
-            datasources[d] = ast_DataFrame(d)
-        return datasources[d], None
+        h = hash(str(d))
+        if h not in datasources:
+            datasources[h] = ast_DataFrame(d)
+        return datasources[h], None
 
     # get the parent info
     p_expr, p_filter = render(d.parent, datasources)
