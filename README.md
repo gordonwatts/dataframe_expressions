@@ -75,7 +75,9 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
 - Should we allow for "&" and "|" as logical operators, redefining what they mean in python? numpy defines several logical operators which should translate, but those aren't implemented yet.
 
 - I currently have a parent as "p" in the expression, but then we have a dataframe ast and column ast - which makes it not needed. Why not just convert to using the same thing to refer to a df in an ast?
+   - Internally, the "parent" dataframe is represented as `p` - which means nothing can ever have a `p` object on it or all hell is likely to break loose. A very good argument for not doing it this way.
 
 - For typing I do not know how to forward declare so I can use COlumn and DataFrame inside my method definitions. Static type checkers should pick this up for now by simple logic.
 
 - Using BitAnd and BitOr for and and or - but should I use the logical and and or here to make it clear in the AST what we are talking about?
+
