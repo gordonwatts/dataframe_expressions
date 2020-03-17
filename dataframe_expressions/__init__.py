@@ -1,1 +1,1 @@
-from .DataFrame import DataFrame, Column
+from .DataFrame import DataFrame, Column  # NOQA

@@ -1,11 +1,12 @@
 import ast
 
-from dataframe_expressions.DataFrame import DataFrame, Column, DataFrameTypeError
+from dataframe_expressions.DataFrame import DataFrame, Column
 
 # TODO:
 #  Fluent function calls
 #  numpy math functions (??)
-#  Advanced math operators (https://docs.python.org/3/reference/datamodel.html?highlight=__add__#emulating-numeric-types)
+#  Advanced math operators
+#  (https://docs.python.org/3/reference/datamodel.html?highlight=__add__#emulating-numeric-types)
 #  the operator "in" (contains)? to see if one jet is in aother collection?
 #  the operator len
 
@@ -28,7 +29,7 @@ def test_dataframe_attribute():
 def test_mask_operator_const_lt_const():
     d = DataFrame()
     ref = d.x < 10
-    assert isinstance (ref, Column)
+    assert isinstance(ref, Column)
     assert ref.type == type(bool)
     assert ref.parent != d
     assert ast.dump(ref.child_expr) == "Compare(left=Name(id='p', ctx=Load()), ops=[Lt()], comparators=[Num(n=10)])"
@@ -37,7 +38,7 @@ def test_mask_operator_const_lt_const():
 def test_mask_operator_2nd_dataframe():
     d = DataFrame()
     ref = d.x < d.y
-    assert isinstance (ref, Column)
+    assert isinstance(ref, Column)
     assert ref.type == type(bool)
     assert ref.parent != d
     assert ast.dump(ref.child_expr) == "Compare(left=Name(id='p', ctx=Load()), ops=[Lt()], comparators=[ast_DataFrame()])"
@@ -93,7 +94,7 @@ def test_masking_df():
     d = DataFrame()
     d1 = d[d.x > 10]
     assert isinstance(d1, DataFrame)
-    assert d1.child_expr == None
+    assert d1.child_expr is None
     assert isinstance(d1.filter, Column)
     assert ast.dump(d1.filter.child_expr) == "Compare(left=Name(id='p', ctx=Load()), ops=[Gt()], comparators=[Num(n=10)])"
 
