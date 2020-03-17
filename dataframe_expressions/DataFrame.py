@@ -32,6 +32,7 @@ class Column:
     def __init__(self, t: Any, pnt, expr: ast.AST):
         self.parent = pnt
         self.child_expr = expr
+        self._fields = ('child_expr',)
         self.type = t
 
     def __and__(self, other) -> Any:
