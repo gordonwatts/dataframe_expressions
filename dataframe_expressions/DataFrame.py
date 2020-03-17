@@ -1,5 +1,6 @@
+from __future__ import annotations
 import ast
-from typing import Optional, Any
+from typing import Optional, Any, Union
 
 
 class DataFrameTypeError(Exception):
@@ -29,19 +30,19 @@ class Column:
     Base class for a single sequence. Unlike a `DataFrame` this can't have any complex structure.
     It is a sequence of items, assumed to be of the same type.
     '''
-    def __init__(self, t: Any, pnt, expr: ast.AST):
+    def __init__(self, t: Any, pnt: Union[Column, DataFrame], expr: ast.AST):
         self.parent = pnt
         self.child_expr = expr
         self._fields = ('child_expr',)
         self.type = t
 
-    def __and__(self, other) -> Any:
+    def __and__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
         return Column(type(bool), self, ast.BinOp(left=ast.Name(id='p', ctx=ast.Load()),
                       op=ast.BitAnd(), right=_term_to_ast(other)))
         return None
 
-    def __or__(self, other) -> Any:
+    def __or__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
         return Column(type(bool), self, ast.BinOp(left=ast.Name(id='p', ctx=ast.Load()),
                       op=ast.BitOr(), right=_term_to_ast(other)))
@@ -55,7 +56,7 @@ class DataFrame:
     Notes:
         - Any properties we have here will hide the name of a column in this data frame
     '''
-    def __init__(self, pnt=None, expr: Optional[ast.AST] = None, filter=None):
+    def __init__(self, pnt=None, expr: Optional[ast.AST] = None, filter: Optional[Column] = None):
         '''
         Create the base DataFrame that is at the top of the parse tree.
 
@@ -67,31 +68,31 @@ class DataFrame:
         self.child_expr: Optional[ast.AST] = expr
         self.filter = filter
 
-    def check_attribute_name(self, name):
+    def check_attribute_name(self, name) -> None:
         'Throw an error if the attribute name is bad'
         pass
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> DataFrame:
         '''Reference a column name'''
         # self.check_attribute_name(name)
         child_expr = ast.Attribute(value=ast.Name(id='p', ctx=ast.Load()), attr=name,
                                    ctx=ast.Load())
         return DataFrame(self, child_expr)
 
-    def __getitem__(self, expr) -> Any:
+    def __getitem__(self, expr) -> DataFrame:
         '''A filtering operation of some sort'''
         assert isinstance(expr, DataFrame) or isinstance(expr, Column), \
             "Filtering a data frame must be done by a DataFrame expression " \
             "(type: DataFrame or Column)"
         return DataFrame(self, None, expr)
 
-    def __array_ufunc__(ufunc, method, *inputs, **kwargs):
+    def __array_ufunc__(ufunc, method, *inputs, **kwargs) -> Any:
         '''Take over a numpy or similar execution by turning it into a function call'''
         visitor = getattr(ufunc, method.__name__, None)
         assert visitor is not None, f'Unable to call function "{ufunc.__name__}" on dataframe.'
         return visitor(*inputs[2:], **kwargs)
 
-    def __call__(self, *inputs, **kwargs):
+    def __call__(self, *inputs, **kwargs) -> DataFrame:
         '''
         Someone is trying to turn an attribute into a funciton. That is fine, but it takes some
         fancy footwork on our part. Specifically, what we were thinking of as an attribute is
@@ -117,7 +118,7 @@ class DataFrame:
                                   comparators=[other_ast])
         return Column(type(bool), self, compare_ast)
 
-    def __binary_operator(self, operator: ast.AST, other: Any):
+    def __binary_operator(self, operator: ast.AST, other: Any) -> DataFrame:
         '''Build a column for a binary operation that results in a column of single values.'''
 
         # How we do this depends on what other is. We need to encode whatever it is in the AST
@@ -150,20 +151,20 @@ class DataFrame:
         ''' x < y '''
         return self.__binary_operator_compare(ast.GtE(), other)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other) -> DataFrame:
         return self.__binary_operator(ast.Div(), other)
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> DataFrame:
         return self.__binary_operator(ast.Mult(), other)
 
-    def __add__(self, other):
+    def __add__(self, other) -> DataFrame:
         return self.__binary_operator(ast.Add(), other)
 
-    def __sub__(self, other):
+    def __sub__(self, other) -> DataFrame:
         return self.__binary_operator(ast.Sub(), other)
 
 
-def _term_to_ast(term) -> ast.AST:
+def _term_to_ast(term: Union[int, str, DataFrame, Column]) -> ast.AST:
     '''Return an AST that represents the current term
 
     Args:

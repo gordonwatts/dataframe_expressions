@@ -1,2 +1,2 @@
-from .DataFrame import DataFrame, Column, ast_DataFrame  # NOQA
+from .DataFrame import DataFrame, Column, ast_DataFrame, ast_Column  # NOQA
 from .render import render  # NOQA
