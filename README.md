@@ -71,6 +71,7 @@ Not sure these are the right thing, but...
 This isn't an exhaustive list. Just a list of some choices I had to make to get this off the ground.
 
 - Should there be a `Column` and `Dataset`?
+    - Yes - turns out we have rediscovered why there is a Mask and a column distinction in numpy. So the Column object is really a Mask object. This is bad naming, but hopefully for this prototype that won't make much of a difference. So we should definately think a bit about why a Mask has to be treated differently from a `DataFrame` - it isn't intuitively obvious until you get into the code.
 
 - Should we allow for "&" and "|" as logical operators, redefining what they mean in python? numpy defines several logical operators which should translate, but those aren't implemented yet.
 

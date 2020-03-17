@@ -30,23 +30,20 @@ class Column:
     Base class for a single sequence. Unlike a `DataFrame` this can't have any complex structure.
     It is a sequence of items, assumed to be of the same type.
     '''
-    def __init__(self, t: Any, pnt: Union[Column, DataFrame], expr: ast.AST):
-        self.parent = pnt
+    def __init__(self, t: Any, expr: ast.AST):
         self.child_expr = expr
         self._fields = ('child_expr',)
         self.type = t
 
     def __and__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
-        return Column(type(bool), self, ast.BinOp(left=ast.Name(id='p', ctx=ast.Load()),
-                      op=ast.BitAnd(), right=_term_to_ast(other)))
-        return None
+        return Column(type(bool), ast.BoolOp(op=ast.And(),
+                      values=[_term_to_ast(self), _term_to_ast(other)]))
 
     def __or__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
-        return Column(type(bool), self, ast.BinOp(left=ast.Name(id='p', ctx=ast.Load()),
-                      op=ast.BitOr(), right=_term_to_ast(other)))
-        return None
+        return Column(type(bool), ast.BoolOp(op=ast.Or(),
+                      values=[_term_to_ast(self), _term_to_ast(other)]))
 
 
 class DataFrame:
@@ -114,9 +111,9 @@ class DataFrame:
         # How we do this depends on what other is. We need to encode whatever it is in the AST
         # so that it can be properly unpacked.
         other_ast = _term_to_ast(other)
-        compare_ast = ast.Compare(left=ast.Name(id='p', ctx=ast.Load()), ops=[operator],
+        compare_ast = ast.Compare(left=_term_to_ast(self), ops=[operator],
                                   comparators=[other_ast])
-        return Column(type(bool), self, compare_ast)
+        return Column(type(bool), compare_ast)
 
     def __binary_operator(self, operator: ast.AST, other: Any) -> DataFrame:
         '''Build a column for a binary operation that results in a column of single values.'''
