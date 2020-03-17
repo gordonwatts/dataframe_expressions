@@ -56,7 +56,22 @@ Internally, this is rendered as `d.x.sin()`.
 
 While the above shows you want the libaray can track, it says nothing about how you use it. The following steps are necessary.
 
-NO CLUE... Yet.
+1. Subclass `dataframe_expressions.DataFrame` with your class. Make sure you initalize the `DataFrame` sub class. However, no need to pass any arguments. For this discussion lets call this `MyDF`
+
+1. Users build expression as you would expect, `df = MyDF(...)`, and `df1 = df.jets[df.jets.pt > 10]`
+
+1. Users trigger rendering of the expression in your libaray in some way that makes sense, `get_data(df1)`
+
+1. When you get control with the toplevel `DataFrame` expression, you can now do the following to render it:
+
+```
+from dataframe_expressions import render
+expression, filter = render(df1)
+```
+
+`expression` is an `ast.AST` that describes what is being looked at (e.g. `df.jets.pt`). `filter` tells you what rows of the dataframe to look at (e.g. `df.jets.pt > 10 & df.jets.eta.abs() < 1.2`). In each of these there will be custom `ast.AST` nodes called `ast_DataFrame`. If you look at the `dataframe` member of that `ast.AST` node, you'll get back your originally created. You can then use python's `ast` tools to move through the expression parsing and performing the actions as needed.
+
+TODO: This example is a bit sloppy, as we have the usual problem of how to parse at collection vs leaf level. When we have something working, come back and make this more clean.
 
 ## Technology Choices
 
