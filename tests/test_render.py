@@ -125,6 +125,18 @@ def test_subexpr_filter_same():
     assert len(scanner.found_frames) == scanner.found_frames.count(scanner.found_frames[0])
 
 
+def test_multilevel_subexpr():
+    d = DataFrame()
+    d1 = d.jets.pt[d.jets.pt > 30.0]
+    expr = render(d1)
+
+    assert isinstance(expr, ast_Filter)
+    assert isinstance(expr.filter, ast.Compare)
+    ref_in_filter = expr.filter.left
+    ref_in_root = expr.expr
+    assert ref_in_filter is ref_in_root
+
+
 # def test_subexpr_2filter_same():
 # TODO: See the line in the readme - it isn't clear what this means - to take the count of a column.
 #       The semantics are clear, but it is also obvious this is a, from a code point of view, a different

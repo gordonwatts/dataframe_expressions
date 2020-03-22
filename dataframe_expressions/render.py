@@ -1,6 +1,6 @@
 # Methods to render the DataFrame chain as a set of expressions.
 import ast
-from typing import Optional, Dict, Union
+from typing import Dict, Optional, Union
 
 from .DataFrame import Column, DataFrame, ast_Column, ast_DataFrame
 
@@ -110,9 +110,6 @@ def render(d: DataFrame, seen_datasources: Optional[Dict[int, ast_DataFrame]] = 
     datasources: Dict[int, ast_DataFrame] = {} if seen_datasources is None else seen_datasources
     resolved: Dict[int, ast.AST] = {} if resolved_dataframes is None else resolved_dataframes
 
-    if hash(str(d)) in resolved:
-        return resolved[hash(str(d))]
-
     # If we are at the top of the chain, then our return is easy.
     if d.parent is None:
         h = hash(str(d))
@@ -130,5 +127,7 @@ def render(d: DataFrame, seen_datasources: Optional[Dict[int, ast_DataFrame]] = 
         filter_expr = _render_filter(d.filter, datasources, resolved)
         expr = ast_Filter(expr, filter_expr)
 
-    resolved[hash(str(d))] = expr
-    return expr
+    h = hash(ast.dump(expr))
+    if h not in resolved:
+        resolved[h] = expr
+    return resolved[h]
