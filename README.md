@@ -66,10 +66,12 @@ While the above shows you want the libaray can track, it says nothing about how 
 
 ```
 from dataframe_expressions import render
-expression, filter = render(df1)
+expression = render(df1)
 ```
 
-`expression` is an `ast.AST` that describes what is being looked at (e.g. `df.jets.pt`). `filter` tells you what rows of the dataframe to look at (e.g. `df.jets.pt > 10 & df.jets.eta.abs() < 1.2`). In each of these there will be custom `ast.AST` nodes called `ast_DataFrame`. If you look at the `dataframe` member of that `ast.AST` node, you'll get back your originally created. You can then use python's `ast` tools to move through the expression parsing and performing the actions as needed.
+`expression` is an `ast.AST` that describes what is being looked at (e.g. `df.jets.pt`). If the expression is something like `df.jets.pt` then the ast is a chain of python `ast.Attribute` nodes, and the bottom one will be a special `ast_Dataframe` object that contains a member `dataframe` which points to your original sub-classed `MyDF`.
+
+If there are filters, there is another special ast object you need to be able to process, `ast_Filter`. For example, `df[df.met > 50].jets.pt`, will have `expression` starting with two `ast.Attribute` nodes, followed by a `ast_Filter` node. There are two members there, one is `expr` and in this case it will contain the `df`, or the `ast_Dataframe` that points to `df`. The second member is `filter` which points to an expression that is the filter. It should evaluate to true or false. As long as there is repeated phrase, like `df` in `df[df.met > 50].jets.pt` or `df.jets` in `df.jets[df.jets.count() == 2]`, they will point to the same `ast.AST` object - so you can use that in walking the tree to recognize the same expression(s).
 
 TODO: This example is a bit sloppy, as we have the usual problem of how to parse at collection vs leaf level. When we have something working, come back and make this more clean.
 
@@ -97,3 +99,4 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
 
 - Using BitAnd and BitOr for and and or - but should I use the logical and and or here to make it clear in the AST what we are talking about?
 
+- What does `d1[d[d.x > 0].jets.pt > 20].pt` mean? Is this where we are hitting the limit of things? I'd say it means nothing and shoudl create an error. Something like `d1[(d[d.x > 0].jets.pt > 20).count()].pt` works, however. TODO - make this sort of expression an error (the first of these two!) Actually even the above - what does that mean? Isn't the right way to do that is `d1[(d[d.x > 0].jets[d.jets.pt>0].coutn())]` or similar? Ugh. Ok - the thing to do for now is be strict, and we can add things which make life easier later.

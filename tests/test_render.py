@@ -2,13 +2,12 @@
 import ast
 from typing import Optional
 
-from dataframe_expressions import DataFrame, ast_DataFrame, render
+from dataframe_expressions import DataFrame, ast_DataFrame, ast_Filter, render
 
 
 def test_render_easy():
     d = DataFrame()
-    expr, filter = render(d)
-    assert filter is None
+    expr = render(d)
     assert isinstance(expr, ast_DataFrame)
     assert expr.dataframe is d
 
@@ -16,8 +15,7 @@ def test_render_easy():
 def test_render_single_collection():
     d = DataFrame()
     d1 = d.jets
-    expr, filter = render(d1)
-    assert filter is None
+    expr = render(d1)
     assert isinstance(expr, ast.Attribute)
     assert expr.attr == 'jets'
     ast_df = expr.value  # type: ast.AST
@@ -28,8 +26,7 @@ def test_render_single_collection():
 def test_render_base_call():
     d = DataFrame()
     d1 = d.count()
-    expr, filter = render(d1)
-    assert filter is None
+    expr = render(d1)
     assert isinstance(expr, ast.Call)
     assert len(expr.args) == 0
     e_func = expr.func
@@ -53,70 +50,66 @@ def check_col_comp(a: Optional[ast.AST]) -> ast_DataFrame:
 def test_simple_filter():
     d = DataFrame()
     d1 = d[d.x > 0]
-    expr, filter = render(d1)
+    expr = render(d1)
 
-    l_value = check_col_comp(filter)
+    assert isinstance(expr, ast_Filter)
+    l_value = check_col_comp(expr.filter)
     assert l_value.dataframe is d
 
-    assert isinstance(expr, ast_DataFrame)
-    assert expr.dataframe is d
+    assert isinstance(expr.expr, ast_DataFrame)
+    assert expr.expr.dataframe is d
     # This line assures that the sub-expressions are the same, allowing
     # render code to take advantage of this.str()
-    assert expr is l_value
+    assert expr.expr is l_value
 
 
 def test_filter_chaining():
     d = DataFrame()
     d1 = d[d.x > 0]
     d2 = d1[d1.y > 0]
-    expr, filter = render(d2)
+    expr = render(d2)
 
-    assert isinstance(expr, ast_DataFrame)
-    assert expr.dataframe is d
+    assert isinstance(expr, ast_Filter)
+    assert isinstance(expr.expr, ast_Filter)
+    assert isinstance(expr.expr.expr, ast_DataFrame)
+    assert expr.expr.expr.dataframe is d
 
-    assert isinstance(filter, ast.BoolOp)
-    assert isinstance(filter.op, ast.And)
-    assert len(filter.values) == 2
-    left = filter.values[0]
-    right = filter.values[1]
+    assert isinstance(expr.filter, ast.Compare)
+    assert isinstance(expr.expr.filter, ast.Compare)
+
+    # Make sure the ast object is re-used here. This
+    # will be key for the API when trying to render this.
+    left_op = expr.filter.left
+    assert isinstance(left_op, ast.Attribute)
+    assert left_op.value is expr.expr
+
+
+def test_filter_and():
+    d = DataFrame()
+    d1 = d[(d.y > 0) & (d.y < 10)]
+    expr = render(d1)
+
+    assert isinstance(expr, ast_Filter)
+    assert isinstance(expr.expr, ast_DataFrame)
+    assert expr.expr.dataframe is d
+
+    assert isinstance(expr.filter, ast.BoolOp)
+    assert isinstance(expr.filter.op, ast.And)
+    assert len(expr.filter.values) == 2
+    left = expr.filter.values[0]
+    right = expr.filter.values[1]
     assert isinstance(left, ast.Compare)
     assert isinstance(right, ast.Compare)
-    pass
-
-
-def check_and_compare(a: ast.AST):
-    assert isinstance(a, ast.BoolOp)
-    assert isinstance(a.op, ast.And)
-    _ = check_col_comp(a.values[0])
-    _ = check_col_comp(a.values[1])
-
-
-def test_filter_chained_and():
-    d = DataFrame()
-    d1 = d[d.x > 0]
-    d2 = d1[(d1.y > 0) & (d1.y < 10)]
-    expr, filter = render(d2)
-
-    assert isinstance(expr, ast_DataFrame)
-    assert expr.dataframe is d
-
-    assert isinstance(filter, ast.BoolOp)
-    assert isinstance(filter.op, ast.And)
-    assert len(filter.values) == 2
-    left = filter.values[0]
-    right = filter.values[1]
-    assert isinstance(left, ast.Compare)
-    assert isinstance(right, ast.BoolOp)
 
     check_col_comp(left)
-    check_and_compare(right)
+    check_col_comp(right)
 
 
 def test_subexpr_filter_same():
     d = DataFrame()
     d1 = d[d.x > 0]
     d2 = d1[(d1.y > 0) & (d1.y < 10)]
-    expr, filter = render(d2)
+    expr = render(d2)
 
     # The ast that refers to d[d.x>0] should be the same.
     class df_finder(ast.NodeVisitor):
@@ -126,8 +119,32 @@ def test_subexpr_filter_same():
         def visit_ast_DataFrame(self, a: ast_DataFrame):
             self.found_frames.append(a.dataframe)
 
-    assert filter is not None
     scanner = df_finder()
-    scanner.visit(filter)
+    scanner.visit(expr)
 
     assert len(scanner.found_frames) == scanner.found_frames.count(scanner.found_frames[0])
+
+
+# def test_subexpr_2filter_same():
+# TODO: See the line in the readme - it isn't clear what this means - to take the count of a column.
+#       The semantics are clear, but it is also obvious this is a, from a code point of view, a different
+#       way of thinking about things. So we need to be careful here to make sure that we aren't accidentally
+#       adding some new meaning that will get confusing. So think this through before deciding this test
+#       makes sense!
+#     d = DataFrame()
+#     d1 = d[d.x > 0].jets
+#     d2 = d1[(d[d.x > 0].jets.pt > 20).count()].pt
+#     expr = render(d2)
+
+#     # d[d.x > 0].jets are the same, and should refer to the same ast.
+#     class find_attr(ast.NodeVisitor):
+#         def __init__(self):
+#             self.found = []
+
+#         def visit_Attribute(self, a: ast.Attribute):
+#             if a.attr == 'jets':
+#                 self.found.append(a)
+
+#     finder = find_attr()
+#     finder.visit(expr)
+#     assert len(finder.found) == 2
