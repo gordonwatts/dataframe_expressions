@@ -10,6 +10,7 @@ from dataframe_expressions.DataFrame import DataFrame, Column, ast_DataFrame
 #  the operator "in" (contains)? to see if one jet is in aother collection?
 #  the operator len
 #  Make sure if d1 and d2 are two different sized,sourced DataFrames, then d1[d2.x] fails
+#  Filter functions - so pass a filter that gets called with whatever you are filtering on, and returns.
 
 
 def test_empty_ctor():
