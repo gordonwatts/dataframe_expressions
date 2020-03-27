@@ -50,6 +50,12 @@ import numpy as np
 d1 = np.sin(d.x)
 ```
 
+as well as some python function:
+
+```
+d1 = abs(d.x)
+```
+
 Internally, this is rendered as `d.x.sin()`.
 
 ## Usage with a backend
@@ -100,3 +106,5 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
 - Using BitAnd and BitOr for and and or - but should I use the logical and and or here to make it clear in the AST what we are talking about?
 
 - What does `d1[d[d.x > 0].jets.pt > 20].pt` mean? Is this where we are hitting the limit of things? I'd say it means nothing and shoudl create an error. Something like `d1[(d[d.x > 0].jets.pt > 20).count()].pt` works, however. TODO - make this sort of expression an error (the first of these two!) Actually even the above - what does that mean? Isn't the right way to do that is `d1[(d[d.x > 0].jets[d.jets.pt>0].coutn())]` or similar? Ugh. Ok - the thing to do for now is be strict, and we can add things which make life easier later.
+
+- Sometimes functions are defined in palces they make no sense. For example, the `abs` (or any `numpy` function) is defined always, even if your `DataFrame` represents a collection of jets. A reason to have `columns` and `collections` as different objects to help the user, and help editors guess possibilities.
