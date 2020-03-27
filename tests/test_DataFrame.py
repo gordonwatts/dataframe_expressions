@@ -111,6 +111,7 @@ def test_math_division():
     d = DataFrame()
     d1 = d.x/1000
     assert d1.filter is None
+    assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
 
 
@@ -118,6 +119,7 @@ def test_math_mult():
     d = DataFrame()
     d1 = d.x*1000
     assert d1.filter is None
+    assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Mult(), right=Num(n=1000))"
 
 
@@ -125,6 +127,7 @@ def test_math_sub():
     d = DataFrame()
     d1 = d.x-1000
     assert d1.filter is None
+    assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Sub(), right=Num(n=1000))"
 
 
@@ -132,6 +135,7 @@ def test_math_add():
     d = DataFrame()
     d1 = d.x+1000
     assert d1.filter is None
+    assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Add(), right=Num(n=1000))"
 
 
@@ -141,6 +145,14 @@ def test_np_sin():
     d1 = np.sin(d.x)
     assert d1.filter is None
     assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='sin', ctx=Load()), args=[], keywords=[])"
+
+
+def test_python_abs():
+    d = DataFrame()
+    d1 = abs(d.x)
+    assert d1.filter is None
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='abs', ctx=Load()), args=[], keywords=[])"
 
 
 def test_np_sin_kwargs():
@@ -156,6 +168,7 @@ def test_np_arctan2_with_args():
     d = DataFrame()
     d1 = np.arctan2(d.x, 100.0)
     assert d1.filter is None
+    assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='arctan2', ctx=Load()), args=[Num(n=100.0)], keywords=[])"
 
 
@@ -163,6 +176,7 @@ def test_fluent_function_no_args():
     d = DataFrame()
     d1 = d.count()
     assert d1.filter is None
+    assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[], keywords=[])"
 
 
@@ -170,6 +184,7 @@ def test_fluent_function_pos_arg():
     d = DataFrame()
     d1 = d.count(22.0)
     assert d1.filter is None
+    assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[Num(n=22.0)], keywords=[])"
 
 
@@ -177,4 +192,5 @@ def test_fluent_function_kwarg():
     d = DataFrame()
     d1 = d.count(dude=22.0)
     assert d1.filter is None
+    assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[], keywords=[keyword(arg='dude', value=Num(n=22.0))])"

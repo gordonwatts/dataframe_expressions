@@ -105,6 +105,15 @@ class DataFrame:
                                         for k, v in kwargs.items()])
         return DataFrame(self.parent, child_expr)
 
+    def __abs__(self):
+        '''
+        Take the absolute value of ourselves using the python default syntax.
+        '''
+        child_expr = ast.Call(func=ast.Attribute(value=ast.Name('p', ctx=ast.Load()),
+                                                 attr='abs', ctx=ast.Load()),
+                              args=[], keywords=[])
+        return DataFrame(self, child_expr)
+
     def __binary_operator_compare(self, operator: ast.AST, other: Any) -> Column:
         '''Build a column for a binary operation that results in a column of single values.'''
 
