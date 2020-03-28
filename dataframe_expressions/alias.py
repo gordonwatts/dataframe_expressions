@@ -1,5 +1,7 @@
+from __future__ import annotations
 import ast
-from typing import Callable, Optional
+from typing import Callable, List, Optional
+from contextlib import contextmanager
 
 from .DataFrame import DataFrame
 
@@ -14,13 +16,25 @@ class _alias_info:
     '''
     Hold onto all info we need to resolve an alias
     '''
+
+    _inuse_stack: List[_alias_info] = []
+
     def __init__(self, base_obj: str, name: str, func_define: Callable[[DataFrame], DataFrame]):
         self._base_obj = base_obj
         self._func = func_define
         self._name = name
 
     def apply(self, df: DataFrame) -> DataFrame:
-        return self._func(df)
+        @contextmanager
+        def keep_queue_clean(a: _alias_info):
+            _alias_info._inuse_stack.append(a)
+            try:
+                yield a
+            finally:
+                _alias_info._inuse_stack.pop()
+
+        with keep_queue_clean(self):
+            return self._func(df)
 
 
 # List of the known aliases
@@ -37,6 +51,9 @@ def define_alias(base_obj: str, name: str, func_define: Callable[[DataFrame], Da
         ```
 
     When you write `df.jets.pts` it is the same as writing `df.jets.pt/1000.0`.
+
+    If you've already used an alias in constructing a `DataFrame` then it will not be
+    filled: alias are resolved as the DAG is being constructed, not when it is rendered.
 
     ## Adding aliases of the same name
 
@@ -113,7 +130,8 @@ def lookup_alias(df: DataFrame, name: str) -> Optional[_alias_info]:
 
     # Now see if they pattern match
     for a in _alias_catalog[name]:
-        if _matches_pattern(df, a):
-            return a
+        if a not in _alias_info._inuse_stack:
+            if _matches_pattern(df, a):
+                return a
 
     return None

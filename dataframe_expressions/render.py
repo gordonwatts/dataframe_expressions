@@ -97,9 +97,8 @@ def render(d: DataFrame, seen_datasources: Optional[Dict[int, ast_DataFrame]] = 
 
     Returns:
         expr        A python ast.AST that contains the complete expression for whatever this
-                    dDataFrame is meant to represent.
-        filter      A filter to be applied to remove anything that is expected to be removed.
-                    It will be set None if there is no filter applied
+                    dDataFrame is meant to represent. It will include the special `ast_Filter`
+                    nodes that indicate a filtering operation is to take place
 
     Notes:
         In many cases, expressions are repeated. For example, `df[(df.x > 10) & (df.y > 10)]`,

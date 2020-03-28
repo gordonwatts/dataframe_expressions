@@ -148,7 +148,6 @@ def test_resolve_hidden_name():
     t = ast.dump(df1.child_expr)
     assert '1000' in t
 
-
 # def test_run_with_alias_specified():
 #     define_alias(".jets", "pts", lambda j: j.pt / 1000.0)
 #     df = DataFrame()

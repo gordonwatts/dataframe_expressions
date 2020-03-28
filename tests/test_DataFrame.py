@@ -1,6 +1,11 @@
 import ast
 
-from dataframe_expressions.DataFrame import DataFrame, Column, ast_DataFrame
+from numpy.lib.arraysetops import isin
+from dataframe_expressions.DataFrame import ast_Column
+
+from dataframe_expressions import DataFrame, Column, ast_DataFrame, define_alias
+
+from .utils_for_testing import reset_var_counter  # NOQA
 
 # TODO:
 #  Fluent function calls
@@ -12,6 +17,8 @@ from dataframe_expressions.DataFrame import DataFrame, Column, ast_DataFrame
 #  Make sure if d1 and d2 are two different sized,sourced DataFrames, then d1[d2.x] fails
 #  Filter functions - so pass a filter that gets called with whatever you are filtering on, and returns.
 #                   https://stackoverflow.com/questions/847936/how-can-i-find-the-number-of-arguments-of-a-python-function
+#  Aliases allow some recursion, but with total flexability. If there is a circle and you want things done a second time, they
+#          won't be. Perhaps when we have an actual problem we can resolve this.
 
 
 def test_empty_ctor():
@@ -195,3 +202,76 @@ def test_fluent_function_kwarg():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[], keywords=[keyword(arg='dude', value=Num(n=22.0))])"
+
+
+def test_resolve_simple_alias():
+    define_alias("jets", "pts", lambda j: j.pt / 1000.0)
+    df = DataFrame()
+    df1 = df.jets.pts
+    assert df1.filter is None
+    assert df1.child_expr is not None
+    assert '1000' in ast.dump(df1.child_expr)
+
+
+def test_resolve_hidden_alias():
+    define_alias("jets", "pt", lambda j: j.pt / 1000.0)
+    df = DataFrame()
+    df1 = df.jets.pt
+    assert df1.filter is None
+    assert df1.child_expr is not None
+    assert '1000' in ast.dump(df1.child_expr)
+
+
+def test_resolve_dependent():
+    define_alias("jets", "pts", lambda j: j.pt / 1000.0)
+    define_alias("jets", "pt", lambda j: j.pt / 2000.0)
+
+    df = DataFrame()
+    df1 = df.jets.pts
+    assert df1.filter is None
+    assert df1.child_expr is not None
+    assert '1000' in ast.dump(df1.child_expr)
+    assert df1.parent is not None
+    p_df1 = df1.parent
+    assert p_df1.child_expr is not None
+    assert '2000' in ast.dump(p_df1.child_expr)
+
+
+def check_for_compare(e: ast.AST, check: str):
+    assert isinstance(e, ast.Compare)
+    left = e.left  # type: ast.AST
+    assert isinstance(left, ast_DataFrame)
+    t = ast.dump(left.dataframe.child_expr)
+    assert check in t
+
+
+def test_resolve_in_filter():
+    define_alias("jets", "pt", lambda j: j.pt / 2000.0)
+
+    df = DataFrame()
+    df1 = df.jets.pt[df.jets.pt > 50.0]
+
+    assert df1.filter is not None
+    assert isinstance(df1.filter, Column)
+    check_for_compare(df1.filter.child_expr, '2000')
+
+
+def test_resolve_in_filter_twice():
+    define_alias("jets", "pt", lambda j: j.pt / 2000.0)
+
+    df = DataFrame()
+    df1 = df.jets.pt[(df.jets.pt > 50.0) & (df.jets.pt < 60.0)]
+
+    assert df1.filter is not None
+    assert isinstance(df1.filter.child_expr, ast.BoolOp)
+    bool_op = df1.filter.child_expr
+    assert len(bool_op.values) == 2
+
+    op_1 = bool_op.values[0]  # type: ast.AST
+    op_2 = bool_op.values[1]  # type: ast.AST
+
+    assert isinstance(op_1, ast_Column)
+    assert isinstance(op_2, ast_Column)
+
+    check_for_compare(op_1.column.child_expr, '2000')
+    check_for_compare(op_1.column.child_expr, '2000')

@@ -71,7 +71,13 @@ class DataFrame:
 
     def __getattr__(self, name: str) -> DataFrame:
         '''Reference a column name'''
-        # self.check_attribute_name(name)
+        # Resolve any aliases we need
+        from .alias import lookup_alias
+        a = lookup_alias(self, name)
+        if a is not None:
+            return a.apply(self)
+
+        # Ok - in that case, this is a straight attribute.
         child_expr = ast.Attribute(value=ast.Name(id='p', ctx=ast.Load()), attr=name,
                                    ctx=ast.Load())
         return DataFrame(self, child_expr)
