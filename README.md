@@ -58,6 +58,24 @@ d1 = abs(d.x)
 
 Internally, this is rendered as `d.x.sin()`.
 
+## Aliases
+
+This is a simple feature which allows you to invent short hand for more complex expressions. This mekes it easy to use. Further, the backend never knows about these short-hand scripts - they are just substituted in on the fly as the DAG is built. For example, in the ATLAS experiment I to access jet pT in GeV i need to always divide by 1000. So:
+
+```
+define_alias('', 'pt', lambda o: o.pt / 1000.0)
+```
+
+Now if one enters `d.jets.pt`, the backend will see it as if I typed `df.jets.pt/1000.0`. The same can be done for collections. For example:
+
+```
+define_alias('.', 'eles', lambda e: e.Electrons("Electrons"))
+```
+
+And when one enters `d.eles.pt` the backend will see `df.Electrons("Electrons").pt / 1000.0`.
+
+The aliases can reference each other (though no recusion is allowed), so fairly complex expressions can be built up. This library's alias resolution is quite simple (it is a prototype). Matching is possible. For example, if the first argument is a `.`, then only references directly off the dataframe are translated. This feature could be used to define a _personality_ module for an analysis for an experiment.
+
 ## Usage with a backend
 
 While the above shows you want the libaray can track, it says nothing about how you use it. The following steps are necessary.
