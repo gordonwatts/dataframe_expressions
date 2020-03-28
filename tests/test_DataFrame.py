@@ -11,6 +11,7 @@ from dataframe_expressions.DataFrame import DataFrame, Column, ast_DataFrame
 #  the operator len
 #  Make sure if d1 and d2 are two different sized,sourced DataFrames, then d1[d2.x] fails
 #  Filter functions - so pass a filter that gets called with whatever you are filtering on, and returns.
+#                   https://stackoverflow.com/questions/847936/how-can-i-find-the-number-of-arguments-of-a-python-function
 
 
 def test_empty_ctor():
