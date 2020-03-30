@@ -36,6 +36,42 @@ def test_render_base_call():
     assert e_val.dataframe is d
 
 
+def test_render_func_with_args():
+    d = DataFrame()
+    d1 = d.count(10)
+    expr = render(d1)
+    assert isinstance(expr, ast.Call)
+    assert len(expr.args) == 1
+    arg1 = expr.args[0]
+    assert isinstance(arg1, ast.Num)
+    assert arg1.n == 10
+
+
+def test_render_func_with_df_arg():
+    d = DataFrame()
+    d1 = d.count(d)
+    expr = render(d1)
+    assert isinstance(expr, ast.Call)
+    assert len(expr.args) == 1
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_DataFrame)
+    assert arg1.dataframe is d
+
+
+def test_render_func_with_dfattr_arg():
+    d = DataFrame()
+    d1 = d.jets.count(d.jets)
+    expr = render(d1)
+    assert isinstance(expr, ast.Call)
+    assert len(expr.args) == 1
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast.Attribute)
+    assert isinstance(expr.func, ast.Attribute)
+    root_of_call = expr.func.value
+    assert isinstance(root_of_call, ast.Attribute)
+    assert arg1 is root_of_call
+
+
 def check_col_comp(a: Optional[ast.AST]) -> ast_DataFrame:
     '''Check for a simple column that is a comparison, with df.x on one side'''
     assert a is not None

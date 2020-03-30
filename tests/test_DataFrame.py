@@ -1,14 +1,11 @@
 import ast
 
-from numpy.lib.arraysetops import isin
+from dataframe_expressions import Column, DataFrame, ast_DataFrame, define_alias
 from dataframe_expressions.DataFrame import ast_Column
-
-from dataframe_expressions import DataFrame, Column, ast_DataFrame, define_alias
 
 from .utils_for_testing import reset_var_counter  # NOQA
 
 # TODO:
-#  Fluent function calls
 #  numpy math functions (??)
 #  Advanced math operators
 #  (https://docs.python.org/3/reference/datamodel.html?highlight=__add__#emulating-numeric-types)
@@ -202,6 +199,42 @@ def test_fluent_function_kwarg():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[], keywords=[keyword(arg='dude', value=Num(n=22.0))])"
+
+
+def test_test_fluent_function_df_arg():
+    d = DataFrame()
+    d1 = d.count(d)
+
+    assert d1.filter is None
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
+
+
+def test_test_fluent_function_dfattr_arg():
+    d = DataFrame()
+    d1 = d.count(d.jets)
+
+    assert d1.filter is None
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
+
+
+def test_test_fluent_function_dfattrattr_arg():
+    d = DataFrame()
+    d1 = d.jets.count(d.jets)
+
+    assert d1.filter is None
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
+
+
+def test_test_fluent_function_dfattr1_arg():
+    d = DataFrame()
+    d1 = d.jets.count(d)
+
+    assert d1.filter is None
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
 
 
 def test_resolve_simple_alias():

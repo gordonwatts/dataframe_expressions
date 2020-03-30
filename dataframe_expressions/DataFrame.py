@@ -1,6 +1,6 @@
 from __future__ import annotations
 import ast
-from typing import Optional, Any, Union
+from typing import Any, Optional, Union
 
 
 class DataFrameTypeError(Exception):
@@ -194,7 +194,7 @@ def _term_to_ast(term: Union[int, str, DataFrame, Column]) -> ast.AST:
     elif isinstance(term, Column):
         other_ast = ast_Column(term)
     else:
-        raise DataFrameTypeError("Do not know how to compare a DataFrame with something "
+        raise DataFrameTypeError("Do not know how to render a term "
                                  f"of type '{type(term).__name__}'.")
 
     return other_ast
