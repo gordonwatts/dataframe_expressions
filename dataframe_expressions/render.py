@@ -25,7 +25,7 @@ class ast_Filter (ast.AST):
         pass
 
 
-class _render_context:
+class render_context:
     '''
     Class for internal use - maintains context and references as we move
     through the resolution. While this is returned to user code, it should
@@ -59,7 +59,7 @@ class _render_context:
 
 class _parent_subs(ast.NodeTransformer):
     def __init__(self, parent: Optional[ast.AST],
-                 context: _render_context):
+                 context: render_context):
         self._parent = parent
         self._context = context
 
@@ -82,7 +82,7 @@ class _parent_subs(ast.NodeTransformer):
 
 
 def _get_parent_expression(f: Union[Column, DataFrame],
-                           context: _render_context) \
+                           context: render_context) \
         -> ast.AST:
     '''
     Fetch the parent expression. This doesn't feel like we need this somehow. That it should be
@@ -95,7 +95,7 @@ def _get_parent_expression(f: Union[Column, DataFrame],
         return render(f, context)[0]
 
 
-def _render_filter(f: Column, context: _render_context) \
+def _render_filter(f: Column, context: render_context) \
          -> ast.AST:
     'Render a filter/Mask as a result'
     v = _get_parent_expression(f, context)
@@ -114,8 +114,8 @@ def _build_optional_and(a1: Optional[ast.AST], a2: Optional[ast.AST]) -> Optiona
     return ast.BoolOp(op=ast.And(), values=[a1, a2])
 
 
-def render(d: DataFrame, in_context: Optional[_render_context] = None) \
-        -> Tuple[ast.AST, _render_context]:
+def render(d: DataFrame, in_context: Optional[render_context] = None) \
+        -> Tuple[ast.AST, render_context]:
     '''
     Follows the data frame back to the start and renders it in a complete AST.
 
@@ -133,7 +133,7 @@ def render(d: DataFrame, in_context: Optional[_render_context] = None) \
         in this case. That means the object hash will be the same. This can be used as a
         poor-person's way of doing common sub-expression elminiation.
     '''
-    context = _render_context() if in_context is None else in_context
+    context = render_context() if in_context is None else in_context
 
     # If we are at the top of the chain, then our return is easy.
     if d.parent is None:
@@ -152,7 +152,7 @@ def render(d: DataFrame, in_context: Optional[_render_context] = None) \
     return context._resolve_ast(expr), context
 
 
-def render_callable(callable: ast_Callable, context: _render_context, *args) -> ast.AST:
+def render_callable(callable: ast_Callable, context: render_context, *args) -> ast.AST:
     '''
     A callable is invoked with the given list of arguments.
 
