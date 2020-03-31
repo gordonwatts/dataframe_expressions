@@ -261,6 +261,24 @@ def test_callable_returns_matched_ast():
 
     assert root_of_call is expr1
 
+
+def test_callable_captures_dataframe():
+    d = DataFrame()
+    d1 = d.jets.apply(lambda b: d.jets)
+    expr, ctx = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    assert isinstance(expr.func, ast.Attribute)
+    root_of_call = expr.func.value
+    assert isinstance(root_of_call, ast.Attribute)
+
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_Callable)
+    expr1 = render_callable(arg1, ctx, d.jets)
+
+    assert root_of_call is expr1
+
+
 # def test_subexpr_2filter_same():
 # TODO: See the line in the readme - it isn't clear what this means - to take the count of a column.
 #       The semantics are clear, but it is also obvious this is a, from a code point of view, a different
