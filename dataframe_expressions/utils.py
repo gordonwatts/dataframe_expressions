@@ -12,7 +12,9 @@ class DataFrameTypeError(Exception):
         Exception.__init__(self, message)
 
 
-def _term_to_ast(term: Union[int, str, DataFrame, Column, Callable]) -> ast.AST:
+def _term_to_ast(term: Union[int, str, DataFrame, Column, Callable],
+                 parent_df: Union[DataFrame, Column]) \
+        -> ast.AST:
     '''Return an AST that represents the current term
 
     Args:
@@ -30,7 +32,7 @@ def _term_to_ast(term: Union[int, str, DataFrame, Column, Callable]) -> ast.AST:
     elif isinstance(term, Column):
         other_ast = ast_Column(term)
     elif callable(term):
-        other_ast = ast_Callable(term)
+        other_ast = ast_Callable(term, parent_df)
     else:
         raise DataFrameTypeError("Do not know how to render a term "
                                  f"of type '{type(term).__name__}'.")

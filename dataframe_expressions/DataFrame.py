@@ -20,11 +20,12 @@ class ast_Column(ast.AST):
 
 
 class ast_Callable(ast.AST):
-    'An AST node that is some sort of python callable'
-    def __init__(self, callable: Callable):
+    'An AST node that is some sort of python callable, along with the df it was called from.'
+    def __init__(self, callable: Callable, relative_to: DataFrame):
         ast.AST.__init__(self)
         self._fields = ()
         self.callable = callable
+        self.dataframe = relative_to
 
 
 class Column:
@@ -41,13 +42,13 @@ class Column:
         ''' Bitwise and becomes a logical and. '''
         from .utils import _term_to_ast
         return Column(type(bool), ast.BoolOp(op=ast.And(),
-                      values=[_term_to_ast(self), _term_to_ast(other)]))
+                      values=[_term_to_ast(self, self), _term_to_ast(other, self)]))
 
     def __or__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
         from .utils import _term_to_ast
         return Column(type(bool), ast.BoolOp(op=ast.Or(),
-                      values=[_term_to_ast(self), _term_to_ast(other)]))
+                      values=[_term_to_ast(self, self), _term_to_ast(other, self)]))
 
 
 class DataFrame:
@@ -111,8 +112,8 @@ class DataFrame:
         assert isinstance(self.child_expr, ast.Attribute), \
             'Cannot call a DataFrame directly - must be a function name!'
         from .utils import _term_to_ast
-        child_expr = ast.Call(func=self.child_expr, args=[_term_to_ast(a) for a in inputs],
-                              keywords=[ast.keyword(arg=k, value=_term_to_ast(v))
+        child_expr = ast.Call(func=self.child_expr, args=[_term_to_ast(a, self) for a in inputs],
+                              keywords=[ast.keyword(arg=k, value=_term_to_ast(v, self))
                                         for k, v in kwargs.items()])
         return DataFrame(self.parent, child_expr)
 
@@ -131,8 +132,8 @@ class DataFrame:
         # How we do this depends on what other is. We need to encode whatever it is in the AST
         # so that it can be properly unpacked.
         from .utils import _term_to_ast
-        other_ast = _term_to_ast(other)
-        compare_ast = ast.Compare(left=_term_to_ast(self), ops=[operator],
+        other_ast = _term_to_ast(other, self)
+        compare_ast = ast.Compare(left=_term_to_ast(self, self), ops=[operator],
                                   comparators=[other_ast])
         return Column(type(bool), compare_ast)
 
@@ -142,7 +143,7 @@ class DataFrame:
         # How we do this depends on what other is. We need to encode whatever it is in the AST
         # so that it can be properly unpacked.
         from .utils import _term_to_ast
-        other_ast = _term_to_ast(other)
+        other_ast = _term_to_ast(other, self)
         operated = ast.BinOp(left=ast.Name(id='p', ctx=ast.Load()), op=operator, right=other_ast)
         return DataFrame(self, operated)
 

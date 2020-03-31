@@ -174,4 +174,4 @@ def render_callable(callable: ast_Callable, context: _render_context, *args) -> 
         return render(d_result, context)[0]
     else:
         from .utils import _term_to_ast
-        return _term_to_ast(d_result)
+        return _term_to_ast(d_result,  DataFrame())
