@@ -112,7 +112,9 @@ class DataFrame:
         assert isinstance(self.child_expr, ast.Attribute), \
             'Cannot call a DataFrame directly - must be a function name!'
         from .utils import _term_to_ast
-        child_expr = ast.Call(func=self.child_expr, args=[_term_to_ast(a, self) for a in inputs],
+        assert self.parent is not None, 'Internal programming error'
+        child_expr = ast.Call(func=self.child_expr,
+                              args=[_term_to_ast(a, self.parent) for a in inputs],
                               keywords=[ast.keyword(arg=k, value=_term_to_ast(v, self))
                                         for k, v in kwargs.items()])
         return DataFrame(self.parent, child_expr)

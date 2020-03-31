@@ -262,6 +262,24 @@ def test_callable_returns_matched_ast():
     assert root_of_call is expr1
 
 
+def test_callable_context():
+    d = DataFrame()
+    d1 = d.jets.apply(lambda b: b)
+    expr, ctx = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_Callable)
+
+    expr1 = render_callable(arg1, ctx, arg1.dataframe)
+
+    assert isinstance(expr.func, ast.Attribute)
+    root_of_call = expr.func.value
+    assert isinstance(root_of_call, ast.Attribute)
+
+    assert root_of_call is expr1
+
+
 def test_callable_captures_dataframe():
     d = DataFrame()
     d1 = d.jets.apply(lambda b: d.jets)
