@@ -1,7 +1,7 @@
 import ast
 
 from dataframe_expressions import Column, DataFrame, ast_DataFrame, define_alias
-from dataframe_expressions.DataFrame import ast_Column
+from dataframe_expressions import ast_Callable, ast_Column
 
 from .utils_for_testing import reset_var_counter  # NOQA
 
@@ -308,3 +308,14 @@ def test_resolve_in_filter_twice():
 
     check_for_compare(op_1.column.child_expr, '2000')
     check_for_compare(op_1.column.child_expr, '2000')
+
+
+def test_lambda_argument():
+    df = DataFrame()
+    df1 = df.apply(lambda e: e)
+
+    assert df1.child_expr is not None
+    assert isinstance(df1.child_expr, ast.Call)
+    assert len(df1.child_expr.args) == 1
+    arg1 = df1.child_expr.args[0]
+    assert isinstance(arg1, ast_Callable)

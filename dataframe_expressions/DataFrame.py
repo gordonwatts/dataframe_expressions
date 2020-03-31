@@ -1,12 +1,6 @@
 from __future__ import annotations
 import ast
-from typing import Any, Optional, Union
-
-
-class DataFrameTypeError(Exception):
-    '''Thrown when we don't understand the type in an expression'''
-    def __init__(self, message):
-        Exception.__init__(self, message)
+from typing import Any, Optional, Callable
 
 
 class ast_DataFrame(ast.AST):
@@ -25,6 +19,14 @@ class ast_Column(ast.AST):
         self.column = col
 
 
+class ast_Callable(ast.AST):
+    'An AST node that is some sort of python callable'
+    def __init__(self, callable: Callable):
+        ast.AST.__init__(self)
+        self._fields = ()
+        self.callable = callable
+
+
 class Column:
     '''
     Base class for a single sequence. Unlike a `DataFrame` this can't have any complex structure.
@@ -37,11 +39,13 @@ class Column:
 
     def __and__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
+        from .utils import _term_to_ast
         return Column(type(bool), ast.BoolOp(op=ast.And(),
                       values=[_term_to_ast(self), _term_to_ast(other)]))
 
     def __or__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
+        from .utils import _term_to_ast
         return Column(type(bool), ast.BoolOp(op=ast.Or(),
                       values=[_term_to_ast(self), _term_to_ast(other)]))
 
@@ -106,6 +110,7 @@ class DataFrame:
             'Cannot call a DataFrame directly - must be a funciton name!'
         assert isinstance(self.child_expr, ast.Attribute), \
             'Cannot call a DataFrame directly - must be a function name!'
+        from .utils import _term_to_ast
         child_expr = ast.Call(func=self.child_expr, args=[_term_to_ast(a) for a in inputs],
                               keywords=[ast.keyword(arg=k, value=_term_to_ast(v))
                                         for k, v in kwargs.items()])
@@ -125,6 +130,7 @@ class DataFrame:
 
         # How we do this depends on what other is. We need to encode whatever it is in the AST
         # so that it can be properly unpacked.
+        from .utils import _term_to_ast
         other_ast = _term_to_ast(other)
         compare_ast = ast.Compare(left=_term_to_ast(self), ops=[operator],
                                   comparators=[other_ast])
@@ -135,6 +141,7 @@ class DataFrame:
 
         # How we do this depends on what other is. We need to encode whatever it is in the AST
         # so that it can be properly unpacked.
+        from .utils import _term_to_ast
         other_ast = _term_to_ast(other)
         operated = ast.BinOp(left=ast.Name(id='p', ctx=ast.Load()), op=operator, right=other_ast)
         return DataFrame(self, operated)
@@ -174,27 +181,3 @@ class DataFrame:
 
     def __sub__(self, other) -> DataFrame:
         return self.__binary_operator(ast.Sub(), other)
-
-
-def _term_to_ast(term: Union[int, str, DataFrame, Column]) -> ast.AST:
-    '''Return an AST that represents the current term
-
-    Args:
-        term        The term (int, string, float, DataFrame, Column, etc.)
-
-    Returns
-    '''
-    other_ast = None
-    if isinstance(term, int) or isinstance(term, float):
-        other_ast = ast.Num(n=term)
-    elif isinstance(term, str):
-        other_ast = ast.Str(s=term)
-    elif isinstance(term, DataFrame):
-        other_ast = ast_DataFrame(term)
-    elif isinstance(term, Column):
-        other_ast = ast_Column(term)
-    else:
-        raise DataFrameTypeError("Do not know how to render a term "
-                                 f"of type '{type(term).__name__}'.")
-
-    return other_ast

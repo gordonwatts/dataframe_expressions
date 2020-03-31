@@ -2,12 +2,15 @@
 import ast
 from typing import Optional
 
-from dataframe_expressions import DataFrame, ast_DataFrame, ast_Filter, render
+import pytest
+
+from dataframe_expressions import (
+    DataFrame, ast_Callable, ast_DataFrame, ast_Filter, render, render_callable)
 
 
 def test_render_easy():
     d = DataFrame()
-    expr = render(d)
+    expr, _ = render(d)
     assert isinstance(expr, ast_DataFrame)
     assert expr.dataframe is d
 
@@ -15,7 +18,7 @@ def test_render_easy():
 def test_render_single_collection():
     d = DataFrame()
     d1 = d.jets
-    expr = render(d1)
+    expr, _ = render(d1)
     assert isinstance(expr, ast.Attribute)
     assert expr.attr == 'jets'
     ast_df = expr.value  # type: ast.AST
@@ -26,7 +29,7 @@ def test_render_single_collection():
 def test_render_base_call():
     d = DataFrame()
     d1 = d.count()
-    expr = render(d1)
+    expr, _ = render(d1)
     assert isinstance(expr, ast.Call)
     assert len(expr.args) == 0
     e_func = expr.func
@@ -39,7 +42,7 @@ def test_render_base_call():
 def test_render_func_with_args():
     d = DataFrame()
     d1 = d.count(10)
-    expr = render(d1)
+    expr, _ = render(d1)
     assert isinstance(expr, ast.Call)
     assert len(expr.args) == 1
     arg1 = expr.args[0]
@@ -50,7 +53,7 @@ def test_render_func_with_args():
 def test_render_func_with_df_arg():
     d = DataFrame()
     d1 = d.count(d)
-    expr = render(d1)
+    expr, _ = render(d1)
     assert isinstance(expr, ast.Call)
     assert len(expr.args) == 1
     arg1 = expr.args[0]  # type: ast.AST
@@ -61,7 +64,7 @@ def test_render_func_with_df_arg():
 def test_render_func_with_dfattr_arg():
     d = DataFrame()
     d1 = d.jets.count(d.jets)
-    expr = render(d1)
+    expr, _ = render(d1)
     assert isinstance(expr, ast.Call)
     assert len(expr.args) == 1
     arg1 = expr.args[0]  # type: ast.AST
@@ -86,7 +89,7 @@ def check_col_comp(a: Optional[ast.AST]) -> ast_DataFrame:
 def test_simple_filter():
     d = DataFrame()
     d1 = d[d.x > 0]
-    expr = render(d1)
+    expr, _ = render(d1)
 
     assert isinstance(expr, ast_Filter)
     l_value = check_col_comp(expr.filter)
@@ -103,7 +106,7 @@ def test_filter_chaining():
     d = DataFrame()
     d1 = d[d.x > 0]
     d2 = d1[d1.y > 0]
-    expr = render(d2)
+    expr, _ = render(d2)
 
     assert isinstance(expr, ast_Filter)
     assert isinstance(expr.expr, ast_Filter)
@@ -123,7 +126,7 @@ def test_filter_chaining():
 def test_filter_and():
     d = DataFrame()
     d1 = d[(d.y > 0) & (d.y < 10)]
-    expr = render(d1)
+    expr, _ = render(d1)
 
     assert isinstance(expr, ast_Filter)
     assert isinstance(expr.expr, ast_DataFrame)
@@ -145,7 +148,7 @@ def test_subexpr_filter_same():
     d = DataFrame()
     d1 = d[d.x > 0]
     d2 = d1[(d1.y > 0) & (d1.y < 10)]
-    expr = render(d2)
+    expr, _ = render(d2)
 
     # The ast that refers to d[d.x>0] should be the same.
     class df_finder(ast.NodeVisitor):
@@ -164,7 +167,7 @@ def test_subexpr_filter_same():
 def test_multilevel_subexpr():
     d = DataFrame()
     d1 = d.jets.pt[d.jets.pt > 30.0]
-    expr = render(d1)
+    expr, _ = render(d1)
 
     assert isinstance(expr, ast_Filter)
     assert isinstance(expr.filter, ast.Compare)
@@ -172,6 +175,91 @@ def test_multilevel_subexpr():
     ref_in_root = expr.expr
     assert ref_in_filter is ref_in_root
 
+
+def test_callable_reference():
+    d = DataFrame()
+    d1 = d.jets.apply(lambda b: b)
+    expr, _ = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    assert len(expr.args) == 1
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_Callable)
+
+
+def test_callable_simple_call():
+    d = DataFrame()
+    d1 = d.apply(lambda b: b)
+    expr, ctx = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_Callable)
+
+    expr1 = render_callable(arg1, ctx, d)
+    assert isinstance(expr1, ast_DataFrame)
+    assert expr1.dataframe is d
+
+
+def test_callable_wrong_number_args():
+    d = DataFrame()
+    d1 = d.apply(lambda b: b)
+    expr, ctx = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_Callable)
+
+    with pytest.raises(Exception):
+        render_callable(arg1, ctx, d, d)
+
+
+def test_callable_function():
+    def test_func(b):
+        return b
+
+    d = DataFrame()
+    d1 = d.apply(test_func)
+    expr, ctx = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_Callable)
+
+    expr1 = render_callable(arg1, ctx, d)
+    assert isinstance(expr1, ast_DataFrame)
+    assert expr1.dataframe is d
+
+
+def test_callable_returns_const():
+    d = DataFrame()
+    d1 = d.apply(lambda b: 20)
+    expr, ctx = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_Callable)
+
+    expr1 = render_callable(arg1, ctx, d)
+    assert isinstance(expr1, ast.Num)
+    assert expr1.n == 20
+
+
+def test_callable_returns_matched_ast():
+    d = DataFrame()
+    d1 = d.jets.apply(lambda b: b)
+    expr, ctx = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    assert isinstance(expr.func, ast.Attribute)
+    root_of_call = expr.func.value
+    assert isinstance(root_of_call, ast.Attribute)
+
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_Callable)
+    expr1 = render_callable(arg1, ctx, d.jets)
+
+    assert root_of_call is expr1
 
 # def test_subexpr_2filter_same():
 # TODO: See the line in the readme - it isn't clear what this means - to take the count of a column.
