@@ -104,4 +104,34 @@ def test_DF_user_render():
     assert f.__name__ == 'func1'
 
 
-# Test expressions in args are not just ast_DataFrames!
+def test_df_user_render_args():
+    @user_func
+    def func1(x: float) -> float:
+        assert False
+
+    d = DataFrame()
+    d1 = func1(d.jets)
+    chain, _ = render(d1)
+    assert chain is not None
+    assert isinstance(chain, ast.Call)
+    call = chain  # type: ast.Call
+    assert len(call.args) == 1
+    a1 = call.args[0]  # type: ast.AST
+    assert isinstance(a1, ast.Attribute)
+
+
+def test_df_user_render_2args():
+    @user_func
+    def func1(x1: float, x2: float) -> float:
+        assert False
+
+    d = DataFrame()
+    d1 = func1(d.jets, d.jets)
+    chain, _ = render(d1)
+    assert chain is not None
+    assert isinstance(chain, ast.Call)
+    call = chain  # type: ast.Call
+    assert len(call.args) == 2
+    a1 = call.args[0]  # type: ast.AST
+    a2 = call.args[1]  # type: ast.AST
+    assert a1 is a2
