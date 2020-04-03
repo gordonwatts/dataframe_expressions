@@ -3,7 +3,7 @@ from typing import Callable, Union, Optional
 import inspect
 
 from .DataFrame import (
-    Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame)
+    Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame, ast_FunctionPlaceholder)
 
 
 # TODO: Fix the circular include triggered by _term_to_ast
@@ -35,6 +35,9 @@ def _term_to_ast(term: Union[int, str, DataFrame, Column, Callable],
     elif isinstance(term, Column):
         other_ast = ast_Column(term)
     elif callable(term):
+        assert parent_df is not None, \
+            'Internal Error: Parent DF is required when creating a Callable'
+        assert isinstance(parent_df, DataFrame)
         other_ast = ast_Callable(term, parent_df)
     else:
         raise DataFrameTypeError("Do not know how to render a term "
@@ -70,7 +73,7 @@ def user_func(f: Callable) -> Callable:
             raise Exception(f'Function {f.__name__} was called with {len(args)} arguments '
                             '- but needs {len(f_sig.parameters)}')
         f_args = [_term_to_ast(a, None) for a in args]
-        call = ast.Call(func=_term_to_ast(f, None), args=f_args)
-        return DataFrame(None, expr=call)
+        call = ast.Call(func=ast_FunctionPlaceholder(f), args=f_args)
+        return DataFrame(DataFrame(), expr=call)
 
     return emulate_function_call_in_DF

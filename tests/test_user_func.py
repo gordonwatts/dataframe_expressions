@@ -3,8 +3,8 @@ import inspect
 
 import pytest
 
-from dataframe_expressions import DataFrame, ast_DataFrame, user_func
-from dataframe_expressions.DataFrame import ast_Callable
+from dataframe_expressions import (
+    DataFrame, ast_FunctionPlaceholder, ast_DataFrame, render, user_func)
 
 
 def test_DF_user_func():
@@ -20,7 +20,7 @@ def test_DF_user_func():
     assert isinstance(d1.child_expr, ast.Call)
 
     f_c = d1.child_expr.func
-    assert isinstance(f_c, ast_Callable)
+    assert isinstance(f_c, ast_FunctionPlaceholder)
     f_sig = inspect.signature(f_c.callable)
     assert str(f_sig) == "(x: float) -> float"
 
@@ -43,7 +43,7 @@ def test_DF_user_number_arg():
     assert isinstance(d1.child_expr, ast.Call)
 
     f_c = d1.child_expr.func
-    assert isinstance(f_c, ast_Callable)
+    assert isinstance(f_c, ast_FunctionPlaceholder)
     f_sig = inspect.signature(f_c.callable)
     assert str(f_sig) == "(x: float, y: float) -> float"
 
@@ -79,3 +79,29 @@ def test_DF_user_two_funcs():
     # some funny lambda semantics
     d = DataFrame()
     func2(func1(d), func1(d))
+
+
+def test_DF_user_render():
+    @user_func
+    def func1(x: float) -> float:
+        assert False
+
+    d = DataFrame()
+    d1 = func1(d)
+    chain, context = render(d1)
+    assert chain is not None
+    assert context is not None
+    assert isinstance(chain, ast.Call)
+    call = chain  # type: ast.Call
+    assert len(call.args) == 1
+    a1 = call.args[0]  # type: ast.AST
+    assert isinstance(a1, ast_DataFrame)
+    assert a1.dataframe is d
+
+    assert isinstance(call.func, ast_FunctionPlaceholder)
+    callable = call.func  # type: ast_FunctionPlaceholder
+    f = callable.callable
+    assert f.__name__ == 'func1'
+
+
+# Test expressions in args are not just ast_DataFrames!

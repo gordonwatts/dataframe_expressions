@@ -21,7 +21,7 @@ class ast_Column(ast.AST):
 
 class ast_Callable(ast.AST):
     'An AST node that is some sort of python callable, along with the df it was called from.'
-    def __init__(self, callable: Callable, relative_to: Optional[DataFrame]):
+    def __init__(self, callable: Callable, relative_to: DataFrame):
         '''
         relative_to is optional - in which case this is a function call, not an
         extension method!
@@ -30,6 +30,14 @@ class ast_Callable(ast.AST):
         self._fields = ()
         self.callable = callable
         self.dataframe = relative_to
+
+
+class ast_FunctionPlaceholder(ast.AST):
+    'An AST node that represents a function to be called, that is a placeholder'
+    def __init__(self, callable: Callable):
+        ast.AST.__init__(self)
+        self._fields = ()
+        self.callable = callable
 
 
 class Column:
@@ -62,7 +70,9 @@ class DataFrame:
     Notes:
         - Any properties we have here will hide the name of a column in this data frame
     '''
-    def __init__(self, pnt=None, expr: Optional[ast.AST] = None, filter: Optional[Column] = None):
+    def __init__(self, pnt: DataFrame = None,
+                 expr: Optional[ast.AST] = None,
+                 filter: Optional[Column] = None):
         '''
         Create the base DataFrame that is at the top of the parse tree.
 
