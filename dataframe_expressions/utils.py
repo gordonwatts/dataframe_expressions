@@ -1,6 +1,9 @@
-from typing import Union, Callable
 import ast
-from .DataFrame import DataFrame, Column, ast_DataFrame, ast_Column, ast_Callable
+from typing import Callable, Union, Optional
+import inspect
+
+from .DataFrame import (
+    Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame)
 
 
 # TODO: Fix the circular include triggered by _term_to_ast
@@ -13,7 +16,7 @@ class DataFrameTypeError(Exception):
 
 
 def _term_to_ast(term: Union[int, str, DataFrame, Column, Callable],
-                 parent_df: Union[DataFrame, Column]) \
+                 parent_df: Optional[Union[DataFrame, Column]]) \
         -> ast.AST:
     '''Return an AST that represents the current term
 
@@ -38,3 +41,36 @@ def _term_to_ast(term: Union[int, str, DataFrame, Column, Callable],
                                  f"of type '{type(term).__name__}'.")
 
     return other_ast
+
+
+def user_func(f: Callable) -> Callable:
+    '''
+    This will allow a function to be embded into the DataFrame call sequence. For example,
+
+        ```
+        @user_func
+        def add_it(p1: float) -> float:
+            assert False, 'should never be called'
+        ```
+
+        And then if you've got `df` defined as your dataframe, you can write:
+
+        ```
+        add_it(df.jets.pt)
+        ```
+
+        And the resulting `DataFrame` will effecively call `add_it` on each value of `pt` in the
+        sequence.
+
+        There are a lot of limitations in this prototype!
+    '''
+    def emulate_function_call_in_DF(*args):
+        f_sig = inspect.signature(f)
+        if len(f_sig.parameters) != len(args):
+            raise Exception(f'Function {f.__name__} was called with {len(args)} arguments '
+                            '- but needs {len(f_sig.parameters)}')
+        f_args = [_term_to_ast(a, None) for a in args]
+        call = ast.Call(func=_term_to_ast(f, None), args=f_args)
+        return DataFrame(None, expr=call)
+
+    return emulate_function_call_in_DF
