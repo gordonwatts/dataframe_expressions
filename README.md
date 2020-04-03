@@ -58,6 +58,32 @@ d1 = abs(d.x)
 
 Internally, this is rendered as `d.x.sin()`.
 
+## Lambda functions and captured variables
+
+It is possible to use lambda's that capture variables, allowing combinations of objects. For example:
+
+```
+d.jets.map(lambda j: d.eles.map(lambda e: j.DeltaR(e)))
+```
+
+Would produce a stream of DR's for each jet with each electron. It is up to the backend how a function like `map` is used (and of course `DeltaR`).
+
+## Backend Functions
+
+Sometimes the backend defines some functions which are directly callable. For example, `DataR` which might take several parameters. With some hints, these are encoded as direct function calls in the final `ast`:
+
+```
+from dataframe_expressions import user_func
+
+@user_func
+def calc_it (pt1: float) -> float:
+    assert False, 'Should never be called'
+
+calced = calc_it(d.jets.pt)
+```
+
+In this case, `calced` would be expected to be a column of jet `pt`'s that were all put together.
+
 ## Aliases
 
 This is a simple feature which allows you to invent short hand for more complex expressions. This mekes it easy to use. Further, the backend never knows about these short-hand scripts - they are just substituted in on the fly as the DAG is built. For example, in the ATLAS experiment I to access jet pT in GeV i need to always divide by 1000. So:
