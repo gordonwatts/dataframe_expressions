@@ -172,6 +172,8 @@ def render_callable(callable: ast_Callable, context: render_context, *args) -> a
     # Render it
     if isinstance(d_result, DataFrame):
         return render(d_result, context)[0]
+    elif isinstance(d_result, Column):
+        return _render_filter(d_result, context)
     else:
         from .utils import _term_to_ast
         return _term_to_ast(d_result,  DataFrame())
