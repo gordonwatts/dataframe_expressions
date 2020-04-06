@@ -61,6 +61,13 @@ def test_render_func_with_df_arg():
     assert arg1.dataframe is d
 
 
+def test_render_compare():
+    d = DataFrame()
+    d1 = d.jet.pt > 500
+    expr, _ = render(d1)
+    assert isinstance(expr, ast.Compare)
+
+
 def test_render_func_with_dfattr_arg():
     d = DataFrame()
     d1 = d.jets.count(d.jets)

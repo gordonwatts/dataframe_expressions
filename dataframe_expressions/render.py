@@ -114,7 +114,7 @@ def _build_optional_and(a1: Optional[ast.AST], a2: Optional[ast.AST]) -> Optiona
     return ast.BoolOp(op=ast.And(), values=[a1, a2])
 
 
-def render(d: DataFrame, in_context: Optional[render_context] = None) \
+def render(d: Union[DataFrame, Column], in_context: Optional[render_context] = None) \
         -> Tuple[ast.AST, render_context]:
     '''
     Follows the data frame back to the start and renders it in a complete AST.
@@ -134,6 +134,10 @@ def render(d: DataFrame, in_context: Optional[render_context] = None) \
         poor-person's way of doing common sub-expression elminiation.
     '''
     context = render_context() if in_context is None else in_context
+
+    # If this is a column, then it is a comparison expression.
+    if isinstance(d, Column):
+        return _render_filter(d, context), context
 
     # If we are at the top of the chain, then our return is easy.
     if d.parent is None:
