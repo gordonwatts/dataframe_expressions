@@ -103,9 +103,16 @@ class DataFrame:
 
     def __getitem__(self, expr) -> DataFrame:
         '''A filtering operation of some sort'''
-        assert isinstance(expr, DataFrame) or isinstance(expr, Column), \
+        assert isinstance(expr, DataFrame) or isinstance(expr, Column) or callable(expr), \
             "Filtering a data frame must be done by a DataFrame expression " \
             "(type: DataFrame or Column)"
+
+        if callable(expr) and not (isinstance(expr, DataFrame) or isinstance(expr, Column)):
+            c_expr = expr(self)
+            assert isinstance(c_expr, DataFrame) or isinstance(c_expr, Column), \
+                f"Filter function '{expr.__name__}'' did not return a DataFrame expression"
+            expr = c_expr
+
         return DataFrame(self, None, expr)
 
     def __array_ufunc__(ufunc, method, *inputs, **kwargs) -> Any:

@@ -102,6 +102,35 @@ def test_simple_filter():
     assert expr.expr is l_value
 
 
+def test_simple_filter_func():
+    def test(j):
+        return j.x > 0
+
+    d = DataFrame()
+    d1 = d[test]
+    expr, _ = render(d1)
+    assert isinstance(expr, ast_Filter)
+    l_value = check_col_comp(expr.filter)
+    assert l_value.dataframe is d
+
+    assert isinstance(expr.expr, ast_DataFrame)
+    assert expr.expr.dataframe is d
+    assert expr.expr is l_value
+
+
+def test_simple_filter_lambda():
+    d = DataFrame()
+    d1 = d[lambda j: j.x > 0]
+    expr, _ = render(d1)
+    assert isinstance(expr, ast_Filter)
+    l_value = check_col_comp(expr.filter)
+    assert l_value.dataframe is d
+
+    assert isinstance(expr.expr, ast_DataFrame)
+    assert expr.expr.dataframe is d
+    assert expr.expr is l_value
+
+
 def test_filter_chaining():
     d = DataFrame()
     d1 = d[d.x > 0]

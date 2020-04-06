@@ -84,6 +84,16 @@ calced = calc_it(d.jets.pt)
 
 In this case, `calced` would be expected to be a column of jet `pt`'s that were all put together.
 
+## Filter Functions
+
+If a filter gets to be too complex (the code between a `[` and a `]`), then it might be simpler to put it in a separate function.
+
+```
+def good_jet(j):
+    (j.pt > 30) & (abs(j.eta) < 2.4)
+
+good_jets_pt = df.jets[good_jet].pt
+
 ## Aliases
 
 This is a simple feature which allows you to invent short hand for more complex expressions. This mekes it easy to use. Further, the backend never knows about these short-hand scripts - they are just substituted in on the fly as the DAG is built. For example, in the ATLAS experiment I to access jet pT in GeV i need to always divide by 1000. So:
