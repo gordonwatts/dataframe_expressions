@@ -1,6 +1,6 @@
 from __future__ import annotations
 import ast
-from typing import Any, Optional, Callable
+from typing import Any, Optional, Callable, Dict, Union, Tuple, List
 
 
 class ast_DataFrame(ast.AST):
@@ -72,40 +72,115 @@ class DataFrame:
     '''
     def __init__(self, pnt: DataFrame = None,
                  expr: Optional[ast.AST] = None,
-                 filter: Optional[Column] = None):
+                 filter: Optional[Column] = None,
+                 df_to_copy: Optional[DataFrame] = None):
         '''
         Create the base DataFrame that is at the top of the parse tree.
 
         Arguments
             p           Parent dataframe we are coming from
             expr        Expression to be applied to the parent
+            filter      A filter to be applied
+            df_to_copy  A dataframe to be copied from (like a clone operation)
         '''
         self.parent: Optional[DataFrame] = pnt
         self.child_expr: Optional[ast.AST] = expr
         self.filter = filter
+        self._sub_df: Dict[str, DataFrame] = {}
+
+        if df_to_copy is not None:
+            self.child_expr = df_to_copy.child_expr
+            self.filter = df_to_copy.filter
+            self._sub_df = df_to_copy._sub_df
 
     def check_attribute_name(self, name) -> None:
         'Throw an error if the attribute name is bad'
         pass
 
+    def _find_compat_parent_attribute(self, name) \
+            -> Optional[Tuple[DataFrame, DataFrame, List[Column]]]:
+        '''
+        Find a compatible parent's attribute. If not compatible, then
+        return none.
+        '''
+        p = self
+        filters: List[Column] = []
+        while p is not None:
+            if p.filter is not None:
+                filters.append(p.filter)
+
+            p = p.parent
+            if p is not None:
+                if name in p._sub_df:
+                    expr = p._sub_df[name]
+                    return expr, p, filters
+
+                p = p.parent
+                if p is not None and p.child_expr is not None:
+                    return None
+
+        return None
+
+    def _replace_root_expr(self, parent: DataFrame, filters: List[Column]):
+        '''
+        Find the parent in our hierarchy, and then insert the new stuff,
+        cloning the df as we go back
+        '''
+        if self is parent:
+            # Ok - we found the parent dataframe. Time to create new dataframes with
+            # filters.
+            df = self
+            for f in filters:
+                df = DataFrame(df, None, f)
+            return df
+
+        if self.parent is None:
+            return self
+
+        if self != parent:
+            df = self.parent._replace_root_expr(parent, filters)
+            # If no replacements happened, then do nothing.
+            if df is self.parent:
+                return self
+            # Clone.
+            return DataFrame(df, df_to_copy=self)
+
     def __getattr__(self, name: str) -> DataFrame:
         '''Reference a column name'''
-        # Resolve any aliases we need
-        from .alias import lookup_alias
-        a = lookup_alias(self, name)
-        if a is not None:
-            return a.apply(self)
+        # Have we done this before?
+        if name not in self._sub_df:
+            result = None
 
-        # Ok - in that case, this is a straight attribute.
-        child_expr = ast.Attribute(value=ast.Name(id='p', ctx=ast.Load()), attr=name,
-                                   ctx=ast.Load())
-        return DataFrame(self, child_expr)
+            # Resolve any aliases we need
+            if result is None:
+                from .alias import lookup_alias
+                a = lookup_alias(self, name)
+                if a is not None:
+                    result = a.apply(self)
 
-    def __getitem__(self, expr) -> DataFrame:
+            # Is this attribute used by anyone above us?
+            if result is None:
+                p_attr = self._find_compat_parent_attribute(name)
+                if p_attr is not None:
+                    # Tricky part - we need any of the filters that were accumulated applied.
+                    attr, parent, filters = p_attr
+                    df = attr._replace_root_expr(parent, filters)
+                    result = df
+
+            # Ok - in that case, this is a straight attribute.
+            if result is None:
+                child_expr = ast.Attribute(value=ast.Name(id='p', ctx=ast.Load()), attr=name,
+                                           ctx=ast.Load())
+                result = DataFrame(self, child_expr)
+
+            self._sub_df[name] = result
+        return self._sub_df[name]
+
+    def __getitem__(self, expr: Union[Callable, DataFrame, Column]) -> DataFrame:
         '''A filtering operation of some sort'''
         assert isinstance(expr, DataFrame) or isinstance(expr, Column) or callable(expr), \
             "Filtering a data frame must be done by a DataFrame expression " \
-            "(type: DataFrame or Column)"
+            f"(type: DataFrame or Column) not '{type(expr).__name__}'"
 
         if callable(expr) and not (isinstance(expr, DataFrame) or isinstance(expr, Column)):
             c_expr = expr(self)
@@ -113,7 +188,21 @@ class DataFrame:
                 f"Filter function '{expr.__name__}'' did not return a DataFrame expression"
             expr = c_expr
 
+        # Redundant, but above too complex for type processor?
+        assert isinstance(expr, Column), 'Internal error - filter must be a bool column!'
         return DataFrame(self, None, expr)
+
+    def __setitem__(self, key, expr) -> DataFrame:
+        '''
+        Add a new leaf to this data frame
+        '''
+        assert isinstance(key, str)
+        assert len(key) > 0
+        if key in self._sub_df:
+            raise Exception(f'You may not redefine "{key}".')
+
+        self._sub_df[key] = expr
+        return self
 
     def __array_ufunc__(ufunc, method, *inputs, **kwargs) -> Any:
         '''Take over a numpy or similar execution by turning it into a function call'''

@@ -93,8 +93,33 @@ def good_jet(j):
     (j.pt > 30) & (abs(j.eta) < 2.4)
 
 good_jets_pt = df.jets[good_jet].pt
+```
 
-## Aliases
+## Adding computed expressions to the Data Model
+
+There are two ways to define _new columns_ in the data model. In both cases the idea is that a new computation expression can replace the old one. The first method looks more `pandas` like, and the second one looks more like a regular expression sustitution. The second method is quite general, powerful, and thus quite likely to take your foot off. Not sure it will surive the prototype.
+
+### Adding to the data model by defining a new column
+
+A new column can be configured by using array access:
+
+```
+df.jets['ptgev'] = df.jets.pt/1000.0
+
+jetpt_in_gev = df.jets.ptgev
+```
+
+This will work even through a filter, as you might expect:
+
+```
+df.jets['ptgev'] = df.jets.pt / 1000.0
+
+jetpt_in_gev = df.jets[df.jets.ptgev > 30].ptgev
+```
+
+The prototype implementation is particularly fragile - but that is due to poor design rather than a techincal limitation.
+
+### Adding to the data model using an Alias
 
 This is a simple feature which allows you to invent short hand for more complex expressions. This mekes it easy to use. Further, the backend never knows about these short-hand scripts - they are just substituted in on the fly as the DAG is built. For example, in the ATLAS experiment I to access jet pT in GeV i need to always divide by 1000. So:
 
@@ -164,3 +189,5 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
 - Sometimes functions are defined in palces they make no sense. For example, the `abs` (or any `numpy` function) is defined always, even if your `DataFrame` represents a collection of jets. A reason to have `columns` and `collections` as different objects to help the user, and help editors guess possibilities.
 
 - There should be no concept of `parent` in a `DataFrame`. The expression should be everything, and point to any referenced objects. This will be especially true if mutliple root `DataFrame`'s are ever to be used.
+
+- Is it important to define new columns using the '=' sign? e.g. `df.jets.ptgev = df.jets.pt/1000.0`?
