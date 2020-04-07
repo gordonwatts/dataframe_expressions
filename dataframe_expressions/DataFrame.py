@@ -198,7 +198,9 @@ class DataFrame:
             expr = c_expr
 
         # Redundant, but above too complex for type processor?
-        assert isinstance(expr, Column), 'Internal error - filter must be a bool column!'
+        # TODO: problem is when expr is a callable like a map function that
+        #       will make a new bool column out of this.
+        # assert isinstance(expr, Column), 'Internal error - filter must be a bool column!'
         return DataFrame(self, None, expr)
 
     def __setitem__(self, key, expr) -> DataFrame:
