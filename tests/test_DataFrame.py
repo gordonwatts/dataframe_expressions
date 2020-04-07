@@ -5,7 +5,7 @@ import pytest
 from dataframe_expressions import Column, DataFrame, ast_DataFrame, define_alias
 from dataframe_expressions import ast_Callable, ast_Column
 
-from .utils_for_testing import reset_var_counter
+from .utils_for_testing import reset_var_counter  # NOQA
 
 # TODO:
 #  numpy math functions (??)

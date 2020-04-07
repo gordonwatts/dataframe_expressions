@@ -215,11 +215,11 @@ class DataFrame:
         self._sub_df[key] = _sub_link_info(expr, True)
         return self
 
-    def __array_ufunc__(ufunc, method, *inputs, **kwargs) -> Any:
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs) -> Any:
         '''Take over a numpy or similar execution by turning it into a function call'''
-        visitor = getattr(ufunc, method.__name__, None)
+        visitor = getattr(self, ufunc.__name__, None)
         assert visitor is not None, f'Unable to call function "{ufunc.__name__}" on dataframe.'
-        return visitor(*inputs[2:], **kwargs)
+        return visitor(*inputs[1:], **kwargs)
 
     def __call__(self, *inputs, **kwargs) -> DataFrame:
         '''
