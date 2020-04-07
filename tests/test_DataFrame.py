@@ -323,6 +323,16 @@ def test_lambda_argument():
     assert isinstance(arg1, ast_Callable)
 
 
+def test_lambda_in_filter():
+    df = DataFrame()
+    df1 = df[df.apply(lambda e: e == 1)]
+
+    assert df1.child_expr is None
+    assert df1.filter is not None
+    assert isinstance(df1.filter, Column)
+    assert isinstance(df1.filter.child_expr, ast.Call)
+
+
 def test_create_col_with_text():
     df = DataFrame()
     df.jets['ptgev'] = df.jets.pt / 1000

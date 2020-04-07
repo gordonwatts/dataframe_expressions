@@ -197,10 +197,12 @@ class DataFrame:
                 f"Filter function '{expr.__name__}'' did not return a DataFrame expression"
             expr = c_expr
 
+        if isinstance(expr, DataFrame):
+            assert expr.filter is None
+            assert expr.child_expr is not None
+            expr = Column(bool, expr.child_expr)
         # Redundant, but above too complex for type processor?
-        # TODO: problem is when expr is a callable like a map function that
-        #       will make a new bool column out of this.
-        # assert isinstance(expr, Column), 'Internal error - filter must be a bool column!'
+        assert isinstance(expr, Column), 'Internal error - filter must be a bool column!'
         return DataFrame(self, None, expr)
 
     def __setitem__(self, key, expr) -> DataFrame:
