@@ -63,6 +63,15 @@ class Column:
                       values=[_term_to_ast(self, self), _term_to_ast(other, self)]))
 
 
+class _sub_link_info:
+    '''
+    Info on links between dataframes
+    '''
+    def __init__(self, df, computed_col: bool):
+        self.df = df
+        self.computed_col = computed_col
+
+
 class DataFrame:
     '''
     Base class for building a dataframe expression.
@@ -86,7 +95,7 @@ class DataFrame:
         self.parent: Optional[DataFrame] = pnt
         self.child_expr: Optional[ast.AST] = expr
         self.filter = filter
-        self._sub_df: Dict[str, DataFrame] = {}
+        self._sub_df: Dict[str, _sub_link_info] = {}
 
         if df_to_copy is not None:
             self.child_expr = df_to_copy.child_expr
@@ -97,7 +106,7 @@ class DataFrame:
         'Throw an error if the attribute name is bad'
         pass
 
-    def _find_compat_parent_attribute(self, name) \
+    def _find_compat_parent_attribute(self, name, computed_col_only: bool = True) \
             -> Optional[Tuple[DataFrame, DataFrame, List[Column]]]:
         '''
         Find a compatible parent's attribute. If not compatible, then
@@ -111,8 +120,8 @@ class DataFrame:
 
             p = p.parent
             if p is not None:
-                if name in p._sub_df:
-                    expr = p._sub_df[name]
+                if name in p._sub_df and ((not computed_col_only) or p._sub_df[name].computed_col):
+                    expr = p._sub_df[name].df
                     return expr, p, filters
 
                 p = p.parent
@@ -173,8 +182,8 @@ class DataFrame:
                                            ctx=ast.Load())
                 result = DataFrame(self, child_expr)
 
-            self._sub_df[name] = result
-        return self._sub_df[name]
+            self._sub_df[name] = _sub_link_info(result, False)
+        return self._sub_df[name].df
 
     def __getitem__(self, expr: Union[Callable, DataFrame, Column]) -> DataFrame:
         '''A filtering operation of some sort'''
@@ -201,7 +210,7 @@ class DataFrame:
         if key in self._sub_df:
             raise Exception(f'You may not redefine "{key}".')
 
-        self._sub_df[key] = expr
+        self._sub_df[key] = _sub_link_info(expr, True)
         return self
 
     def __array_ufunc__(ufunc, method, *inputs, **kwargs) -> Any:

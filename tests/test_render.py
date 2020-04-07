@@ -180,6 +180,15 @@ def test_filter_and():
     check_col_comp(right)
 
 
+def test_filter_with_attribute():
+    d = DataFrame()
+    d1 = d.jets[d.jets.pt > 30].pt
+    expr, _ = render(d1)
+
+    assert isinstance(expr, ast.Attribute)
+    assert isinstance(expr.value, ast_Filter)
+
+
 def test_subexpr_filter_same():
     d = DataFrame()
     d1 = d[d.x > 0]
