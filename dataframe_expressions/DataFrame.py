@@ -1,6 +1,6 @@
 from __future__ import annotations
 import ast
-from typing import Any, Optional, Callable, Dict, Union, Tuple, List
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 
 class ast_DataFrame(ast.AST):
@@ -200,7 +200,10 @@ class DataFrame:
         if isinstance(expr, DataFrame):
             assert expr.filter is None
             assert expr.child_expr is not None
-            expr = Column(bool, expr.child_expr)
+            assert expr.parent is not None
+            from .utils import _replace_parent_references
+            child_expr = _replace_parent_references(expr.child_expr, expr.parent)
+            expr = Column(bool, child_expr)
         # Redundant, but above too complex for type processor?
         assert isinstance(expr, Column), 'Internal error - filter must be a bool column!'
         return DataFrame(self, None, expr)

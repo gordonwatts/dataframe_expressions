@@ -358,6 +358,17 @@ def test_callable_captures_column():
 
     assert isinstance(expr1, ast.Compare)
 
+
+def test_render_callable_captured():
+    d = DataFrame()
+    jets = d.jets
+    mcs = d.mcs
+    near_a_jet = mcs[mcs.map(lambda mc: jets.pt.Count() == 2)]
+
+    expr1, ctx = render(near_a_jet)
+    assert expr1 is not None
+    assert isinstance(expr1, ast_Filter)
+
 # def test_subexpr_2filter_same():
 # TODO: See the line in the readme - it isn't clear what this means - to take the count of a column.
 #       The semantics are clear, but it is also obvious this is a, from a code point of view, a different

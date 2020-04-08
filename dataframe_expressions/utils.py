@@ -77,3 +77,20 @@ def user_func(f: Callable) -> Callable:
         return DataFrame(DataFrame(), expr=call)
 
     return emulate_function_call_in_DF
+
+
+def _replace_parent_references(a: ast.AST, sub: DataFrame) -> ast.AST:
+    '''
+    Find Name(id='p') and replace them with sub in a.
+    '''
+    class replace_p(ast.NodeTransformer):
+        def __init__(self, sub: DataFrame):
+            ast.NodeTransformer.__init__(self)
+            self._sub = ast_DataFrame(sub)
+
+        def visit_Name(self, a: ast.Name):
+            if a.id == 'p':
+                return self._sub
+            return self.generic_visit(a)
+
+    return replace_p(sub).visit(a)
