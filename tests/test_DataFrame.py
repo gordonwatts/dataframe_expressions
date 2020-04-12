@@ -346,8 +346,8 @@ def test_create_col_twice():
     df = DataFrame()
     df.jets['ptgev'] = df.jets.pt / 1000.0
 
-    with pytest.raises(Exception):
-        df.jets['ptgev'] = df.jets.pt / 1001.0
+    # This should generate a warning, but nothign else.
+    df.jets['ptgev'] = df.jets.pt / 1001.0
 
 
 def test_create_access_col_twice():

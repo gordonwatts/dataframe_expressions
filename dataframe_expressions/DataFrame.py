@@ -229,7 +229,10 @@ class DataFrame:
         assert isinstance(key, str)
         assert len(key) > 0
         if key in self._sub_df:
-            raise Exception(f'You may not redefine "{key}".')
+            if not self._sub_df[key].computed_col:
+                raise Exception(f'You may not redefine "{key}".')
+            else:
+                logging.getLogger(__name__).warning('')
 
         self._sub_df[key] = _sub_link_info(expr, True)
         return self
