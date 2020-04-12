@@ -1,5 +1,6 @@
 from __future__ import annotations
 import ast
+import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 
@@ -65,11 +66,22 @@ class Column:
 
 class _sub_link_info:
     '''
-    Info on links between dataframes
+    Info on links between dataframes or functions that modify data frames
     '''
-    def __init__(self, df, computed_col: bool):
-        self.df = df
+    def __init__(self, df: Union[DataFrame, Callable[[DataFrame], DataFrame]],
+                 computed_col: bool):
+        self._df = df
         self.computed_col = computed_col
+
+    def render(self, df: DataFrame) -> DataFrame:
+        '''
+        Given the parent DF, render the substitution
+        '''
+        if isinstance(self._df, DataFrame):
+            return self._df
+        else:
+            assert callable(self._df), 'Internal Error - bad subsititution'
+            return self._df(df)
 
 
 class DataFrame:
@@ -121,7 +133,7 @@ class DataFrame:
             p = p.parent
             if p is not None:
                 if name in p._sub_df and ((not computed_col_only) or p._sub_df[name].computed_col):
-                    expr = p._sub_df[name].df
+                    expr = p._sub_df[name].render(p)
                     return expr, p, filters
 
                 p = p.parent
@@ -183,7 +195,7 @@ class DataFrame:
                 result = DataFrame(self, child_expr)
 
             self._sub_df[name] = _sub_link_info(result, False)
-        return self._sub_df[name].df
+        return self._sub_df[name].render(self)
 
     def __getitem__(self, expr: Union[Callable, DataFrame, Column]) -> DataFrame:
         '''A filtering operation of some sort'''
@@ -208,7 +220,9 @@ class DataFrame:
         assert isinstance(expr, Column), 'Internal error - filter must be a bool column!'
         return DataFrame(self, None, expr)
 
-    def __setitem__(self, key, expr) -> DataFrame:
+    def __setitem__(self, key: str,
+                    expr: Union[DataFrame, Callable[[DataFrame], DataFrame]]) \
+            -> DataFrame:
         '''
         Add a new leaf to this data frame
         '''

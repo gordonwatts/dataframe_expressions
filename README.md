@@ -66,7 +66,7 @@ It is possible to use lambda's that capture variables, allowing combinations of 
 d.jets.map(lambda j: d.eles.map(lambda e: j.DeltaR(e)))
 ```
 
-Would produce a stream of DR's for each jet with each electron. It is up to the backend how a function like `map` is used (and of course `DeltaR`).
+Would produce a stream of `DataFrame`'s for each jet with each electron. It is up to the backend how a function like `map` is used (and of course `DeltaR`). Further, the backend must run the parsing as arguments can be arbitrary, so `dataframe_expressions` can't figure out the meaning on its own. The function `map` here, for example, has no special meaning in this library.
 
 ## Backend Functions
 
@@ -99,9 +99,41 @@ good_jets_pt = df.jets[good_jet].pt
 
 There are two ways to define _new columns_ in the data model. In both cases the idea is that a new computation expression can replace the old one. The first method looks more `pandas` like, and the second one looks more like a regular expression sustitution. The second method is quite general, powerful, and thus quite likely to take your foot off. Not sure it will surive the prototype.
 
-### Adding to the data model by defining a new column
+### Adding a new computed experssion column
 
-A new column can be configured by using array access:
+This is the most common way to add a new expression to the data model: one provides a lambda function that is computed during rendering by `dataframe_expressions`:
+
+```
+df.jets['ptgev'] = lambda j: j.pt / 1000.0
+```
+
+By default the argument is everything that proceeds the brackets - in this case `df.jets`. All the rules about capturing variables apply here, so it is possible to add a set of tracks near the jet, for example, using this (as long as it is implemented by the backend). For example:
+
+```
+def near(tks, j):
+    return tks[tks.map(lambda t: DeltaR(t, j) < 0.4)]
+
+df.jets['tracks'] = lambda j: near(df.tracks, j)
+
+# This will now get you the number of tracks near each jet:
+df.jets.tracks.Count()
+```
+
+The above assumes a lot of backend implementation: `DeltaR`, `map`, `Count`, along with the deata model that has jets and tracks, but hopefully gives one an idea of the power availible
+
+### Replacing the contents of a column
+
+It is possible to graft one part of the datamodel into another part of the datamodel, when necessary. It can be done with the above lambda expression as well, but this is a short cut:
+
+```
+df.jets['mcs'] = df.mcs[df.mcs.pdgid == 11]
+
+how_many_mcs = df.jets.mcs.Count()
+```
+
+Though that would have the same number for every jet.
+
+Because of the way rendering works, the following also does what you expect:
 
 ```
 df.jets['ptgev'] = df.jets.pt/1000.0
@@ -109,7 +141,9 @@ df.jets['ptgev'] = df.jets.pt/1000.0
 jetpt_in_gev = df.jets.ptgev
 ```
 
-This will work even through a filter, as you might expect:
+This is because in the current `dataframe_expressions` model, every single appearence of a common expression, like `df.jets` corresponds to the same same set of jets. In sort, implied iterators are common here. In this prototype it isn't obvious this should be here.
+
+All of this will work even through a filter, as you might expect:
 
 ```
 df.jets['ptgev'] = df.jets.pt / 1000.0
@@ -191,3 +225,5 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
 - There should be no concept of `parent` in a `DataFrame`. The expression should be everything, and point to any referenced objects. This will be especially true if mutliple root `DataFrame`'s are ever to be used.
 
 - Is it important to define new columns using the '=' sign? e.g. `df.jets.ptgev = df.jets.pt/1000.0`?
+
+- The rule that every expression that is the same implies the same implied iterator. That means the current code can't do 2 jets, for example. There are several ways to "fix" this, however, the biggest question: is this reasonable?

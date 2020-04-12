@@ -415,4 +415,12 @@ def test_create_col_with_filter_early_access():
     assert ast.dump(d1.child_expr) == "Attribute(value=Name(id='p', ctx=Load()), attr='ptgev', ctx=Load())"
 
 
+def test_create_col_with_lambda():
+    df = DataFrame()
+    df.jets['ptgev'] = lambda j: j.pt / 1000
+    d1 = df.jets.ptgev
+
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
+
 # Can we do an "or"?
