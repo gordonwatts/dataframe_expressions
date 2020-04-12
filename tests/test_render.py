@@ -5,7 +5,8 @@ from typing import Optional
 import pytest
 
 from dataframe_expressions import (
-    DataFrame, ast_Callable, ast_DataFrame, ast_Filter, render, render_callable)
+    DataFrame, ast_Callable, ast_DataFrame, ast_Filter, render, render_context,
+    render_callable)
 
 
 def test_render_easy():
@@ -241,9 +242,30 @@ def test_callable_simple_call():
     arg1 = expr.args[0]  # type: ast.AST
     assert isinstance(arg1, ast_Callable)
 
-    expr1 = render_callable(arg1, ctx, d)
+    expr1, new_ctx = render_callable(arg1, ctx, d)
     assert isinstance(expr1, ast_DataFrame)
     assert expr1.dataframe is d
+
+
+def test_callable_context_no_update():
+    d = DataFrame()
+    d1 = d.apply(lambda b: b.jets.pt)
+    expr, ctx = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    arg1 = expr.args[0]  # type: ast.AST
+    assert isinstance(arg1, ast_Callable)
+
+    seen_ds = len(ctx._seen_datasources)
+    resolved = len(ctx._resolved)
+
+    expr1, new_ctx = render_callable(arg1, ctx, d)
+
+    assert len(new_ctx._seen_datasources) != len(ctx._seen_datasources) \
+        or len(new_ctx._resolved) != len(ctx._resolved)
+
+    assert seen_ds == len(ctx._seen_datasources) \
+        or resolved == len(ctx._resolved)
 
 
 def test_callable_wrong_number_args():
@@ -271,7 +293,7 @@ def test_callable_function():
     arg1 = expr.args[0]  # type: ast.AST
     assert isinstance(arg1, ast_Callable)
 
-    expr1 = render_callable(arg1, ctx, d)
+    expr1, new_ctx = render_callable(arg1, ctx, d)
     assert isinstance(expr1, ast_DataFrame)
     assert expr1.dataframe is d
 
@@ -285,7 +307,7 @@ def test_callable_returns_const():
     arg1 = expr.args[0]  # type: ast.AST
     assert isinstance(arg1, ast_Callable)
 
-    expr1 = render_callable(arg1, ctx, d)
+    expr1, new_ctx = render_callable(arg1, ctx, d)
     assert isinstance(expr1, ast.Num)
     assert expr1.n == 20
 
@@ -302,7 +324,7 @@ def test_callable_returns_matched_ast():
 
     arg1 = expr.args[0]  # type: ast.AST
     assert isinstance(arg1, ast_Callable)
-    expr1 = render_callable(arg1, ctx, d.jets)
+    expr1, new_ctx = render_callable(arg1, ctx, d.jets)
 
     assert root_of_call is expr1
 
@@ -316,7 +338,7 @@ def test_callable_context():
     arg1 = expr.args[0]  # type: ast.AST
     assert isinstance(arg1, ast_Callable)
 
-    expr1 = render_callable(arg1, ctx, arg1.dataframe)
+    expr1, _ = render_callable(arg1, ctx, arg1.dataframe)
 
     assert isinstance(expr.func, ast.Attribute)
     root_of_call = expr.func.value
@@ -337,7 +359,7 @@ def test_callable_captures_dataframe():
 
     arg1 = expr.args[0]  # type: ast.AST
     assert isinstance(arg1, ast_Callable)
-    expr1 = render_callable(arg1, ctx, d.jets)
+    expr1, _ = render_callable(arg1, ctx, d.jets)
 
     assert root_of_call is expr1
 
@@ -354,7 +376,7 @@ def test_callable_captures_column():
 
     arg1 = expr.args[0]  # type: ast.AST
     assert isinstance(arg1, ast_Callable)
-    expr1 = render_callable(arg1, ctx, d.jets)
+    expr1, _ = render_callable(arg1, ctx, d.jets)
 
     assert isinstance(expr1, ast.Compare)
 
@@ -368,6 +390,106 @@ def test_render_callable_captured():
     expr1, ctx = render(near_a_jet)
     assert expr1 is not None
     assert isinstance(expr1, ast_Filter)
+
+
+def test_render_twice():
+    d = DataFrame()
+    jets = d.jets.pt
+
+    expr1, ctx1 = render(jets)
+    expr2, ctx2 = render(jets)
+
+    assert ast.dump(expr1) == ast.dump(expr2)
+
+
+def test_render_twice_with_filter():
+    d = DataFrame()
+    jets = d.jets[d.jets.pt > 10].pt
+
+    expr1, ctx1 = render(jets)
+    expr2, ctx2 = render(jets)
+
+    assert ast.dump(expr1) == ast.dump(expr2)
+
+
+def test_render_context_clone_df():
+    r1 = render_context()
+    r1._seen_datasources[1] = ast_DataFrame(DataFrame())
+
+    r2 = render_context(r1)
+    assert 1 in r2._seen_datasources
+    assert r2._seen_datasources[1] is r1._seen_datasources[1]
+
+    del r1._seen_datasources[1]
+    assert 1 in r2._seen_datasources
+
+
+def test_render_context_clone_resolved():
+    r1 = render_context()
+    r1._resolved[1] = ast_DataFrame(DataFrame())
+
+    r2 = render_context(r1)
+    assert 1 in r2._resolved
+    assert r2._resolved[1] is r1._resolved[1]
+
+    del r1._resolved[1]
+    assert 1 in r2._resolved
+
+
+def test_render_twice_for_same_results():
+
+    df = DataFrame()
+    eles = df.Electrons()
+    mc_part = df.TruthParticles()
+    mc_ele = mc_part[mc_part.pdgId == 11]
+    good_mc_ele = mc_ele[mc_ele.ptgev > 20]
+
+    ele_mcs = eles.map(lambda reco_e: good_mc_ele)
+
+    expr1, context1 = render(ele_mcs)
+    expr2, context2 = render(ele_mcs)
+
+    assert ast.dump(expr1) == ast.dump(expr2)
+    assert len(context1._resolved) == len(context2._resolved)
+    assert len(context1._seen_datasources) == len(context2._seen_datasources)
+
+
+def test_render_callable_twice_for_same_results():
+
+    df = DataFrame()
+    eles = df.Electrons()
+    mc_part = df.TruthParticles()
+    mc_ele = mc_part[mc_part.pdgId == 11]
+    good_mc_ele = mc_ele[mc_ele.ptgev > 20]
+
+    ele_mcs = eles.map(lambda reco_e: good_mc_ele)
+
+    expr, context = render(ele_mcs)
+
+    class find_callable(ast.NodeVisitor):
+        @classmethod
+        def findit(cls, a: ast.AST) -> Optional[ast_Callable]:
+            f = find_callable()
+            f.visit(a)
+            return f._callable
+
+        def __init__(self):
+            ast.NodeVisitor.__init__(self)
+            self._callable: Optional[ast_Callable] = None
+
+        def visit_ast_Callable(self, a: ast_Callable):
+            self._callable = a
+
+    callable = find_callable.findit(expr)
+    assert callable is not None
+
+    c_expr1, c_context1 = render_callable(callable, context, callable.dataframe)
+    c_expr2, c_context2 = render_callable(callable, context, callable.dataframe)
+
+    assert ast.dump(c_expr1) == ast.dump(c_expr2)
+    assert len(c_context1._seen_datasources) == len(c_context2._seen_datasources)
+    assert len(c_context1._resolved) == len(c_context2._resolved)
+
 
 # def test_subexpr_2filter_same():
 # TODO: See the line in the readme - it isn't clear what this means - to take the count of a column.

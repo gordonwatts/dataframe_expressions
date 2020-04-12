@@ -1,8 +1,10 @@
+from __future__ import annotations
 # Methods to render the DataFrame chain as a set of expressions.
 import ast
 from typing import Dict, Optional, Union, Tuple
 
 from .DataFrame import Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame
+from .utils import CloningNodeTransformer
 
 
 class ast_Filter (ast.AST):
@@ -31,9 +33,13 @@ class render_context:
     through the resolution. While this is returned to user code, it should
     not be accessed by user code!
     '''
-    def __init__(self):
-        self._seen_datasources: Dict[int, ast_DataFrame] = {}
-        self._resolved: Dict[int, ast.AST] = {}
+    def __init__(self, template: Optional[render_context] = None):
+        if template is None:
+            self._seen_datasources: Dict[int, ast_DataFrame] = {}
+            self._resolved: Dict[int, ast.AST] = {}
+        else:
+            self._seen_datasources = template._seen_datasources.copy()
+            self._resolved = template._resolved.copy()
 
     def _lookup_dataframe(self, df: DataFrame) -> ast_DataFrame:
         '''
@@ -57,9 +63,16 @@ class render_context:
         return self._resolved[h]
 
 
-class _parent_subs(ast.NodeTransformer):
+class _parent_subs(CloningNodeTransformer):
+    @classmethod
+    def transform(cls, a: ast.AST, parent: Optional[ast.AST],
+                  context: render_context) -> ast.AST:
+        v = _parent_subs(parent, context)
+        return v.visit(a)
+
     def __init__(self, parent: Optional[ast.AST],
                  context: render_context):
+        ast.NodeTransformer.__init__(self)
         self._parent = parent
         self._context = context
 
@@ -89,7 +102,7 @@ def _get_parent_expression(f: Union[Column, DataFrame],
     in the below code, integrated
     '''
     if isinstance(f, Column):
-        child_filter = _parent_subs(None, context).visit(f.child_expr)
+        child_filter = _parent_subs.transform(f.child_expr, None, context)
         return child_filter
     else:
         return render(f, context)[0]
@@ -148,7 +161,7 @@ def render(d: Union[DataFrame, Column], in_context: Optional[render_context] = N
 
     # now we need to tack on our info.
     expr = p_expr if d.child_expr is None \
-        else _parent_subs(p_expr, context).visit(d.child_expr)  # type: ast.AST
+        else _parent_subs.transform(d.child_expr, p_expr, context)
     if d.filter is not None:
         filter_expr = _render_filter(d.filter, context)
         expr = ast_Filter(expr, filter_expr)
@@ -156,12 +169,14 @@ def render(d: Union[DataFrame, Column], in_context: Optional[render_context] = N
     return context._resolve_ast(expr), context
 
 
-def render_callable(callable: ast_Callable, context: render_context, *args) -> ast.AST:
+def render_callable(callable: ast_Callable, context: render_context, *args) \
+        -> Tuple[ast.AST, render_context]:
     '''
     A callable is invoked with the given list of arguments.
 
     Arguments:
         callable            The parsed out function all (labmda, or a funciton proper)
+        context             The context to use when parsing. Will not be touched or updated.
         args                List of positional arguments to be passed to the lambda. They can
                             be any type, including data frame arguments.
 
@@ -169,15 +184,17 @@ def render_callable(callable: ast_Callable, context: render_context, *args) -> a
         expr                A python `ast.AST` that contains the complete expression for whatever
                             this function returns. The expression follows the same rules as the
                             return for the `render` function.
+        context             New context which are things already seen plus anything new.
     '''
     # Invoke the call
     d_result = callable.callable(*args)
+    new_context = render_context(context)
 
     # Render it
     if isinstance(d_result, DataFrame):
-        return render(d_result, context)[0]
+        return render(d_result, new_context)[0], new_context
     elif isinstance(d_result, Column):
-        return _render_filter(d_result, context)
+        return _render_filter(d_result, new_context), new_context
     else:
         from .utils import _term_to_ast
-        return _term_to_ast(d_result,  DataFrame())
+        return _term_to_ast(d_result,  DataFrame()), new_context
