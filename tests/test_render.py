@@ -491,6 +491,19 @@ def test_render_callable_twice_for_same_results():
     assert len(c_context1._resolved) == len(c_context2._resolved)
 
 
+def test_lambda_for_computed_col():
+    df = DataFrame()
+    df.jets['ptgev'] = lambda j: j.pt / 1000
+    d1 = df.jets.ptgev
+
+    expr, _ = render(d1)
+
+    assert isinstance(expr, ast.Call)
+    assert isinstance(expr.func, ast_Callable)
+    assert len(expr.args) == 1
+    a = expr.args[0]
+    assert isinstance(a, ast.Attribute)
+
 # def test_subexpr_2filter_same():
 # TODO: See the line in the readme - it isn't clear what this means - to take the count of a column.
 #       The semantics are clear, but it is also obvious this is a, from a code point of view, a different

@@ -81,7 +81,9 @@ class _sub_link_info:
             return self._df
         else:
             assert callable(self._df), 'Internal Error - bad subsititution'
-            return self._df(df)
+            r = ast_Callable(self._df, df)
+            expr = ast.Call(func=r, args=[ast.Name(id='p', ctx=ast.Load())])
+            return DataFrame(df, expr=expr)
 
 
 class DataFrame:

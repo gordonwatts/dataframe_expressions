@@ -421,6 +421,10 @@ def test_create_col_with_lambda():
     d1 = df.jets.ptgev
 
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
+    p = d1.parent
+    assert isinstance(p, DataFrame)
+    assert isinstance(d1.child_expr, ast.Call)
+    assert len(d1.child_expr.args) == 1
+    assert isinstance(d1.child_expr.args[0], ast.Name)
 
 # Can we do an "or"?
