@@ -71,7 +71,7 @@ def user_func(f: Callable) -> Callable:
         f_sig = inspect.signature(f)
         if len(f_sig.parameters) != len(args):
             raise Exception(f'Function {f.__name__} was called with {len(args)} arguments '
-                            '- but needs {len(f_sig.parameters)}')
+                            f'- but needs {len(f_sig.parameters)}')
         f_args = [_term_to_ast(a, None) for a in args]
         call = ast.Call(func=ast_FunctionPlaceholder(f), args=f_args)
         return DataFrame(DataFrame(), expr=call)
