@@ -63,6 +63,12 @@ class Column:
         return Column(type(bool), ast.BoolOp(op=ast.Or(),
                       values=[_term_to_ast(self, self), _term_to_ast(other, self)]))
 
+    def __invert__(self) -> Column:
+        ''' Invert, or logical NOT operation. '''
+        from .utils import _term_to_ast
+        return Column(type(bool), ast.UnaryOp(op=ast.Invert(),
+                      operand=_term_to_ast(self, self)))
+
 
 class _sub_link_info:
     '''

@@ -105,6 +105,13 @@ def test_mask_operator_or():
     assert ast.dump(ref3.child_expr) == "BoolOp(op=Or(), values=[ast_Column(), ast_Column()])"
 
 
+def test_mask_operator_not():
+    d = DataFrame()
+    ref1 = d.x != 10
+    ref3 = ~ref1
+    assert ast.dump(ref3.child_expr) == "UnaryOp(op=Invert(), operand=ast_Column())"
+
+
 def test_masking_df():
     d = DataFrame()
     d1 = d[d.x > 10]
