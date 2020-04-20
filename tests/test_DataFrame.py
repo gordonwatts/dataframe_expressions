@@ -112,6 +112,13 @@ def test_mask_operator_not():
     assert ast.dump(ref3.child_expr) == "UnaryOp(op=Invert(), operand=ast_Column())"
 
 
+def test_invert_dataframe():
+    d = DataFrame()
+    ref1 = ~d
+    assert ast.dump(ref1.child_expr) == "UnaryOp(op=Invert(), operand=Name(id='p', ctx=Load()))"
+    assert ref1.filter is None
+
+
 def test_masking_df():
     d = DataFrame()
     d1 = d[d.x > 10]

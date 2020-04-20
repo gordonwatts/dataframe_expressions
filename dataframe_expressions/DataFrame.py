@@ -279,6 +279,11 @@ class DataFrame:
                               args=[], keywords=[])
         return DataFrame(self, child_expr)
 
+    def __invert__(self) -> DataFrame:
+        ''' Invert, or logical NOT operation. '''
+        child_expr = ast.UnaryOp(op=ast.Invert(), operand=ast.Name('p', ctx=ast.Load()))
+        return DataFrame(self, child_expr)
+
     def __binary_operator_compare(self, operator: ast.AST, other: Any) -> Column:
         '''Build a column for a binary operation that results in a column of single values.'''
 
