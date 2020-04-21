@@ -21,7 +21,11 @@ def test_create_col_twice():
     df.jets['ptgev'] = df.jets.pt / 1000.0
 
     # This should generate a warning, but nothing else.
-    df.jets['ptgev'] = df.jets.pt / 1001.0
+    df.jets['ptgev'] = df.jets.pt / 1001
+    d1 = df.jets.ptgev
+
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1001))"
 
 
 def test_create_access_col_twice():
@@ -95,8 +99,11 @@ def test_create_col_with_lambda():
     d1 = df.jets.ptgev
 
     assert d1.child_expr is not None
-    p = d1.parent
-    assert isinstance(p, DataFrame)
     assert isinstance(d1.child_expr, ast.Call)
     assert len(d1.child_expr.args) == 1
     assert isinstance(d1.child_expr.args[0], ast.Name)
+    p = d1.parent
+    assert isinstance(p, DataFrame)
+    assert p.parent is not None
+    assert isinstance(p.parent, DataFrame)
+    assert p.parent is df
