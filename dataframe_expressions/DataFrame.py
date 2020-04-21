@@ -103,6 +103,9 @@ class DataFrame:
             if p.filter is not None:
                 filters.append(p.filter)
 
+            if p.child_expr is not None:
+                return None
+
             p = p.parent
             if p is not None:
                 if name in p._sub_df and ((not computed_col_only) or p._sub_df[name].computed_col):
