@@ -62,7 +62,7 @@ def user_func(f: Callable) -> Callable:
         add_it(df.jets.pt)
         ```
 
-        And the resulting `DataFrame` will effecively call `add_it` on each value of `pt` in the
+        And the resulting `DataFrame` will effectively call `add_it` on each value of `pt` in the
         sequence.
 
         There are a lot of limitations in this prototype!
