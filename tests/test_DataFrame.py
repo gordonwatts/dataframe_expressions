@@ -11,7 +11,7 @@ from .utils_for_testing import reset_var_counter  # NOQA
 #  numpy math functions (??)
 #  Advanced math operators
 #  (https://docs.python.org/3/reference/datamodel.html?highlight=__add__#emulating-numeric-types)
-#  the operator "in" (contains)? to see if one jet is in aother collection?
+#  the operator "in" (contains)? to see if one jet is in another collection?
 #  the operator len
 #  Make sure if d1 and d2 are two different sized,sourced DataFrames, then d1[d2.x] fails
 #  Filter functions - so pass a filter that gets called with whatever you are filtering on, and returns.
@@ -115,6 +115,7 @@ def test_mask_operator_not():
 def test_invert_dataframe():
     d = DataFrame()
     ref1 = ~d
+    assert ref1.child_expr is not None
     assert ast.dump(ref1.child_expr) == "UnaryOp(op=Invert(), operand=Name(id='p', ctx=Load()))"
     assert ref1.filter is None
 
@@ -360,7 +361,7 @@ def test_create_col_twice():
     df = DataFrame()
     df.jets['ptgev'] = df.jets.pt / 1000.0
 
-    # This should generate a warning, but nothign else.
+    # This should generate a warning, but nothing else.
     df.jets['ptgev'] = df.jets.pt / 1001.0
 
 
@@ -404,9 +405,9 @@ def test_create_col_yuck_doesnot_track():
 def test_create_col_no_confusion():
     df = DataFrame()
     df.jets['ptgev'] = df.jets.pt / 1000.0
-    d1 = df.jets.pt.ptgetv
+    d1 = df.jets.pt.ptgev
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Attribute(value=Name(id='p', ctx=Load()), attr='ptgetv', ctx=Load())"
+    assert ast.dump(d1.child_expr) == "Attribute(value=Name(id='p', ctx=Load()), attr='ptgev', ctx=Load())"
 
 
 def test_create_col_with_filter_access():

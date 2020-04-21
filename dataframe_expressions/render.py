@@ -85,11 +85,11 @@ class _parent_subs(CloningNodeTransformer):
             return a
 
     def visit_ast_Column(self, a: ast_Column):
-        'We have a column embeded here. Sort it out'
+        'We have a column embedded here. Sort it out'
         return _render_filter(a.column, self._context)
 
     def visit_ast_DataFrame(self, a: ast_DataFrame):
-        'Sort out an embded column'
+        'Sort out an embedded column'
         expr = render(a.dataframe, self._context)[0]
         return expr
 
@@ -144,7 +144,7 @@ def render(d: Union[DataFrame, Column], in_context: Optional[render_context] = N
         In many cases, expressions are repeated. For example, `df[(df.x > 10) & (df.y > 10)]`,
         implies iterating over df. The `ast.AST` that represents `df` will be the same object
         in this case. That means the object hash will be the same. This can be used as a
-        poor-person's way of doing common sub-expression elminiation.
+        poor-person's way of doing common sub-expression elimination.
     '''
     context = render_context() if in_context is None else in_context
 
@@ -175,7 +175,7 @@ def render_callable(callable: ast_Callable, context: render_context, *args) \
     A callable is invoked with the given list of arguments.
 
     Arguments:
-        callable            The parsed out function all (labmda, or a funciton proper)
+        callable            The parsed out function all (lambda, or a function proper)
         context             The context to use when parsing. Will not be touched or updated.
         args                List of positional arguments to be passed to the lambda. They can
                             be any type, including data frame arguments.

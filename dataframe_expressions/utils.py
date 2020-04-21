@@ -48,7 +48,7 @@ def _term_to_ast(term: Union[int, str, DataFrame, Column, Callable],
 
 def user_func(f: Callable) -> Callable:
     '''
-    This will allow a function to be embded into the DataFrame call sequence. For example,
+    This will allow a function to be embedded into the DataFrame call sequence. For example,
 
         ```
         @user_func

@@ -2,6 +2,17 @@
     "python.pythonPath": ".venv\\Scripts\\python.exe",
     "python.linting.flake8Enabled": true,
     "cSpell.words": [
-        "reco"
+        "NOQA",
+        "asts",
+        "callme",
+        "dfattr",
+        "eles",
+        "firstlineno",
+        "funcs",
+        "mult",
+        "numpy",
+        "ptgev",
+        "reco",
+        "ufunc"
     ]
 }

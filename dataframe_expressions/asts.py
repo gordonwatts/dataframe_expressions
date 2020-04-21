@@ -30,9 +30,10 @@ class ast_Callable(ast.AST):
         '''
         ast.AST.__init__(self)
         if callable.__name__ == '<lambda>':
-            self.name = f'lambda-{callable.__code__.co_filename}:{callable.__code__.co_firstlineno}'
+            self.name = f'lambda-{callable.__code__.co_filename}:' \
+                        f'{callable.__code__.co_firstlineno}'
         else:
-            self.name = callable.__name__ 
+            self.name = callable.__name__
         self._fields = ('name',)
         self.callable = callable
         self.dataframe = relative_to

@@ -51,7 +51,7 @@ class _sub_link_info:
         if isinstance(self._df, DataFrame):
             return self._df
         else:
-            assert callable(self._df), 'Internal Error - bad subsititution'
+            assert callable(self._df), 'Internal Error - bad substitution'
             r = ast_Callable(self._df, df)
             expr = ast.Call(func=r, args=[ast.Name(id='p', ctx=ast.Load())])
             return DataFrame(df, expr=expr)
@@ -218,13 +218,13 @@ class DataFrame:
 
     def __call__(self, *inputs, **kwargs) -> DataFrame:
         '''
-        Someone is trying to turn an attribute into a funciton. That is fine, but it takes some
+        Someone is trying to turn an attribute into a function. That is fine, but it takes some
         fancy footwork on our part. Specifically, what we were thinking of as an attribute is
-        actuall a function call. So we have to haul that back to undo the attribute and turn it
-        into a funciton call.
+        actual a function call. So we have to haul that back to undo the attribute and turn it
+        into a function call.
         '''
         assert self.child_expr is not None, \
-            'Cannot call a DataFrame directly - must be a funciton name!'
+            'Cannot call a DataFrame directly - must be a function name!'
         assert isinstance(self.child_expr, ast.Attribute), \
             'Cannot call a DataFrame directly - must be a function name!'
         from .utils import _term_to_ast
