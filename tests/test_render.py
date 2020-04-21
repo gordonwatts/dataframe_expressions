@@ -1,6 +1,6 @@
 # Test the render method
 import ast
-from typing import Optional
+from typing import Optional, Tuple
 
 import pytest
 
@@ -503,6 +503,41 @@ def test_lambda_for_computed_col():
     assert len(expr.args) == 1
     a = expr.args[0]
     assert isinstance(a, ast.Attribute)
+
+
+def test_nested_computed_col():
+    # This is returning a recursive reference sometimes, for reasons not understood.
+    df = DataFrame()
+
+    mc_part = df.TruthParticles('TruthParticles')
+    eles = df.Electrons('Electrons')
+
+    # This gives us a list of events, and in each event, good electrons, and then for each good electron, all good MC electrons that are near by
+    eles['near_mcs'] = lambda reco_e: mc_part
+    eles['hasMC'] = lambda e: e.near_mcs.Count() > 0
+
+    expr, context = render(eles[~eles.hasMC].pt)
+
+    class find_callable(ast.NodeVisitor):
+        def __init__(self):
+            ast.NodeVisitor.__init__(self)
+            self.callable: Optional[ast_Callable] = None
+
+        def visit_ast_Callable(self, a: ast_Callable):
+            assert self.callable is None
+            self.callable = a
+
+    def find_callable_and_render(expr: ast.AST, ctx: render_context) -> Tuple[ast.AST, render_context]:
+        ff = find_callable()
+        ff.visit(expr)
+        assert ff.callable is not None
+        return render_callable(ff.callable, context, ff.callable.dataframe)
+
+    expr2, context_2 = find_callable_and_render(expr, context)
+
+    expr3, _ = find_callable_and_render(expr2, context_2)
+
+    assert ast.dump(expr2) != ast.dump(expr3)
 
 # def test_subexpr_2filter_same():
 # TODO: See the line in the readme - it isn't clear what this means - to take the count of a column.

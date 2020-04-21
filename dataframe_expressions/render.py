@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from typing import Dict, Optional, Union, Tuple
 
-from .DataFrame import Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame
+from dataframe_expressions import Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame
 from .utils import CloningNodeTransformer
 
 

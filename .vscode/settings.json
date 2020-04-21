@@ -1,4 +1,7 @@
 {
     "python.pythonPath": ".venv\\Scripts\\python.exe",
-    "python.linting.flake8Enabled": true
+    "python.linting.flake8Enabled": true,
+    "cSpell.words": [
+        "reco"
+    ]
 }
