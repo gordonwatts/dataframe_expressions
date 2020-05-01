@@ -95,6 +95,38 @@ def test_mask_operator_and():
     assert ast.dump(ref3.child_expr) == "BoolOp(op=And(), values=[ast_Column(), ast_Column()])"
 
 
+def test_mask_operator_and_attributes():
+    d = DataFrame()
+    ref1 = d.x
+    ref2 = d.x
+    ref3 = ref1 & ref2
+    assert ast.dump(ref3.child_expr) == "BoolOp(op=And(), values=[Name(id='p', ctx=Load()), ast_DataFrame()])"
+
+
+
+def test_mask_operator_or_attributes():
+    d = DataFrame()
+    ref1 = d.x
+    ref2 = d.x
+    ref3 = ref1 | ref2
+    assert ast.dump(ref3.child_expr) == "BoolOp(op=Or(), values=[Name(id='p', ctx=Load()), ast_DataFrame()])"
+
+
+def test_mask_operator_and_attribute():
+    d = DataFrame()
+    ref1 = d.x
+    ref2 = d.x > 10
+    ref3 = ref1 & ref2
+    assert ast.dump(ref3.child_expr) == "BoolOp(op=And(), values=[Name(id='p', ctx=Load()), ast_Column()])"
+
+
+def test_mask_operator_invert_attributes():
+    d = DataFrame()
+    ref1 = d.x
+    ref3 = ~ref1
+    assert ast.dump(ref3.child_expr) == "UnaryOp(op=Invert(), operand=Name(id='p', ctx=Load()))"
+
+
 def test_mask_operator_or():
     d = DataFrame()
     ref1 = d.x != 10

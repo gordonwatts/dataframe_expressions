@@ -252,6 +252,18 @@ class DataFrame:
         child_expr = ast.UnaryOp(op=ast.Invert(), operand=ast.Name('p', ctx=ast.Load()))
         return DataFrame(self, child_expr)
 
+    def __and__(self, other) -> Column:
+        ''' Bitwise and becomes a logical and. '''
+        from .utils import _term_to_ast
+        return Column(type(bool), ast.BoolOp(op=ast.And(),
+                      values=[ast.Name('p', ctx=ast.Load()), _term_to_ast(other, self)]))
+
+    def __or__(self, other) -> Column:
+        ''' Bitwise and becomes a logical and. '''
+        from .utils import _term_to_ast
+        return Column(type(bool), ast.BoolOp(op=ast.Or(),
+                      values=[ast.Name('p', ctx=ast.Load()), _term_to_ast(other, self)]))
+
     def __binary_operator_compare(self, operator: ast.AST, other: Any) -> Column:
         '''Build a column for a binary operation that results in a column of single values.'''
 
