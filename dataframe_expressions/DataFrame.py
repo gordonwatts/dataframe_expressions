@@ -256,7 +256,7 @@ class DataFrame:
         ''' Bitwise and becomes a logical and. '''
         from .utils import _term_to_ast
         return Column(type(bool), ast.BoolOp(op=ast.And(),
-                      values=[ast.Name('p', ctx=ast.Load()), _term_to_ast(other, self)]))
+                      values=[_term_to_ast(self, self._parent), _term_to_ast(other, self)]))
 
     def __or__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''

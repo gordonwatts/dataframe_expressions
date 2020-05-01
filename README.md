@@ -211,6 +211,7 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
     - No - since things can return "bool" values and we don't know it because we have no type system,
       they are identical to a column, except we assume they are a df: `df[df.hasProdVtx & df.hasDecayVtx]`,
       for example.
+    - We should get rid of the concept of a parent, dynamic, and replace it with ast_DataFrame - we have it in here already - so why not just stick to that rather than having both it and `p`.
 
 - Should we allow for "&" and "|" as logical operators, redefining what they mean in python? numpy defines several logical operators which should translate, but those aren't implemented yet.
 

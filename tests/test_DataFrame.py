@@ -100,7 +100,7 @@ def test_mask_operator_and_attributes():
     ref1 = d.x
     ref2 = d.x
     ref3 = ref1 & ref2
-    assert ast.dump(ref3.child_expr) == "BoolOp(op=And(), values=[Name(id='p', ctx=Load()), ast_DataFrame()])"
+    assert ast.dump(ref3.child_expr) == "BoolOp(op=And(), values=[ast_DataFrame(), ast_DataFrame()])"
 
 
 
@@ -117,7 +117,7 @@ def test_mask_operator_and_attribute():
     ref1 = d.x
     ref2 = d.x > 10
     ref3 = ref1 & ref2
-    assert ast.dump(ref3.child_expr) == "BoolOp(op=And(), values=[Name(id='p', ctx=Load()), ast_Column()])"
+    assert ast.dump(ref3.child_expr) == "BoolOp(op=And(), values=[ast_DataFrame(), ast_Column()])"
 
 
 def test_mask_operator_invert_attributes():
