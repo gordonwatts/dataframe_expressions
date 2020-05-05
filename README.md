@@ -16,13 +16,13 @@ Now you can mask it with simple operations:
 d1 = d[d.x > 10]
 ```
 
-The operators `<,>, <=, >=, ==,` and `!=` are all supported. You can also combine logical expressions, though watch for operator precidence:
+The operators `<,>, <=, >=, ==,` and `!=` are all supported. You can also combine logical expressions, though watch for operator precedence:
 
 ```
 d1 = d[(d.x > 10) & (d.x < 20)]
 ```
 
-Of cousre, chaining is also allowed:
+Of course, chaining is also allowed:
 
 ```
 d1 = d[dx > 10]
@@ -97,9 +97,9 @@ good_jets_pt = df.jets[good_jet].pt
 
 ## Adding computed expressions to the Data Model
 
-There are two ways to define _new columns_ in the data model. In both cases the idea is that a new computation expression can replace the old one. The first method looks more `pandas` like, and the second one looks more like a regular expression sustitution. The second method is quite general, powerful, and thus quite likely to take your foot off. Not sure it will surive the prototype.
+There are two ways to define _new columns_ in the data model. In both cases the idea is that a new computation expression can replace the old one. The first method looks more `pandas` like, and the second one looks more like a regular expression substitution. The second method is quite general, powerful, and thus quite likely to take your foot off. Not sure it will survive the prototype.
 
-### Adding a new computed experssion column
+### Adding a new computed expression column
 
 This is the most common way to add a new expression to the data model: one provides a lambda function that is computed during rendering by `dataframe_expressions`:
 
@@ -119,14 +119,14 @@ df.jets['tracks'] = lambda j: near(df.tracks, j)
 df.jets.tracks.Count()
 ```
 
-The above assumes a lot of backend implementation: `DeltaR`, `map`, `Count`, along with the deata model that has jets and tracks, but hopefully gives one an idea of the power availible
+The above assumes a lot of backend implementation: `DeltaR`, `map`, `Count`, along with the detector data model that has jets and tracks, but hopefully gives one an idea of the power available.
 
 ### Replacing the contents of a column
 
-It is possible to graft one part of the datamodel into another part of the datamodel, when necessary. It can be done with the above lambda expression as well, but this is a short cut:
+It is possible to graft one part of the data model into another part of the data model, when necessary. It can be done with the above lambda expression as well, but this is a short cut:
 
 ```
-df.jets['mcs'] = df.mcs[df.mcs.pdgid == 11]
+df.jets['mcs'] = df.mcs[df.mcs.pdgId == 11]
 
 how_many_mcs = df.jets.mcs.Count()
 ```
@@ -141,7 +141,7 @@ df.jets['ptgev'] = df.jets.pt/1000.0
 jetpt_in_gev = df.jets.ptgev
 ```
 
-This is because in the current `dataframe_expressions` model, every single appearence of a common expression, like `df.jets` corresponds to the same same set of jets. In sort, implied iterators are common here. In this prototype it isn't obvious this should be here.
+This is because in the current `dataframe_expressions` model, every single appearance of a common expression, like `df.jets` corresponds to the same same set of jets. In sort, implied iterators are common here. In this prototype it isn't obvious this should be here.
 
 All of this will work even through a filter, as you might expect:
 
@@ -151,11 +151,11 @@ df.jets['ptgev'] = df.jets.pt / 1000.0
 jetpt_in_gev = df.jets[df.jets.ptgev > 30].ptgev
 ```
 
-The prototype implementation is particularly fragile - but that is due to poor design rather than a techincal limitation.
+The prototype implementation is particularly fragile - but that is due to poor design rather than a technical limitation.
 
 ### Adding to the data model using an Alias
 
-This is a simple feature which allows you to invent short hand for more complex expressions. This mekes it easy to use. Further, the backend never knows about these short-hand scripts - they are just substituted in on the fly as the DAG is built. For example, in the ATLAS experiment I to access jet pT in GeV i need to always divide by 1000. So:
+This is a simple feature which allows you to invent short hand for more complex expressions. This makes it easy to use. Further, the backend never knows about these short-hand scripts - they are just substituted in on the fly as the DAG is built. For example, in the ATLAS experiment I to access jet pT in GeV i need to always divide by 1000. So:
 
 ```
 define_alias('', 'pt', lambda o: o.pt / 1000.0)
@@ -169,19 +169,19 @@ define_alias('.', 'eles', lambda e: e.Electrons("Electrons"))
 
 And when one enters `d.eles.pt` the backend will see `df.Electrons("Electrons").pt / 1000.0`.
 
-The aliases can reference each other (though no recusion is allowed), so fairly complex expressions can be built up. This library's alias resolution is quite simple (it is a prototype). Matching is possible. For example, if the first argument is a `.`, then only references directly off the dataframe are translated. This feature could be used to define a _personality_ module for an analysis for an experiment.
+The aliases can reference each other (though no recursion is allowed), so fairly complex expressions can be built up. This library's alias resolution is quite simple (it is a prototype). Matching is possible. For example, if the first argument is a `.`, then only references directly off the dataframe are translated. This feature could be used to define a _personality_ module for an analysis for an experiment.
 
 ## Usage with a backend
 
-While the above shows you want the libaray can track, it says nothing about how you use it. The following steps are necessary.
+While the above shows you want the library can track, it says nothing about how you use it. The following steps are necessary.
 
-1. Subclass `dataframe_expressions.DataFrame` with your class. Make sure you initalize the `DataFrame` sub class. However, no need to pass any arguments. For this discussion lets call this `MyDF`
+1. Subclass `dataframe_expressions.DataFrame` with your class. Make sure you initialize the `DataFrame` sub class. However, no need to pass any arguments. For this discussion lets call this `MyDF`
 
 1. Users build expression as you would expect, `df = MyDF(...)`, and `df1 = df.jets[df.jets.pt > 10]`
 
-1. Users trigger rendering of the expression in your libaray in some way that makes sense, `get_data(df1)`
+1. Users trigger rendering of the expression in your library in some way that makes sense, `get_data(df1)`
 
-1. When you get control with the toplevel `DataFrame` expression, you can now do the following to render it:
+1. When you get control with the top level `DataFrame` expression, you can now do the following to render it:
 
 ```
 from dataframe_expressions import render
@@ -200,14 +200,14 @@ Not sure these are the right thing, but...
 
 - Using the python `ast` module to record expressions. Mostly because it is already complete and there are nice visitor objects that make walking it easy. Down side is that python does change the ast every few versions.
 
-- An attribute on DataFrame refers to some data. A method call, however, does not refer to data. So, you can say `d.pt` to get at the pt, but if you said `d.pt()` that would be "bad". The reason for this is so that we can add functions that do things in a fluent way. For example, `d.jets.count()` to coune the number of jets. Or `d.jets[d.jets.pt > 100].count()` or similar. Really, the back end can interpret this, but the front-end semantics sort-of make this assumption.
+- An attribute on DataFrame refers to some data. A method call, however, does not refer to data. So, you can say `d.pt` to get at the pt, but if you said `d.pt()` that would be "bad". The reason for this is so that we can add functions that do things in a fluent way. For example, `d.jets.count()` to count the number of jets. Or `d.jets[d.jets.pt > 100].count()` or similar. Really, the back end can interpret this, but the front-end semantics sort-of make this assumption.
 
 ## Architecture Questions
 
 This isn't an exhaustive list. Just a list of some choices I had to make to get this off the ground.
 
 - Should there be a `Column` and `Dataset`?
-    - Yes - turns out we have rediscovered why there is a Mask and a column distinction in numpy. So the Column object is really a Mask object. This is bad naming, but hopefully for this prototype that won't make much of a difference. So we should definately think a bit about why a Mask has to be treated differently from a `DataFrame` - it isn't intuitively obvious until you get into the code.
+    - Yes - turns out we have rediscovered why there is a Mask and a column distinction in numpy. So the Column object is really a Mask object. This is bad naming, but hopefully for this prototype that won't make much of a difference. So we should definitely think a bit about why a Mask has to be treated differently from a `DataFrame` - it isn't intuitively obvious until you get into the code.
     - No - since things can return "bool" values and we don't know it because we have no type system,
       they are identical to a column, except we assume they are a df: `df[df.hasProdVtx & df.hasDecayVtx]`,
       for example.
@@ -222,11 +222,11 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
 
 - Using BitAnd and BitOr for and and or - but should I use the logical and and or here to make it clear in the AST what we are talking about?
 
-- What does `d1[d[d.x > 0].jets.pt > 20].pt` mean? Is this where we are hitting the limit of things? I'd say it means nothing and shoudl create an error. Something like `d1[(d[d.x > 0].jets.pt > 20).count()].pt` works, however. TODO - make this sort of expression an error (the first of these two!) Actually even the above - what does that mean? Isn't the right way to do that is `d1[(d[d.x > 0].jets[d.jets.pt>0].coutn())]` or similar? Ugh. Ok - the thing to do for now is be strict, and we can add things which make life easier later.
+- What does `d1[d[d.x > 0].jets.pt > 20].pt` mean? Is this where we are hitting the limit of things? I'd say it means nothing and should create an error. Something like `d1[(d[d.x > 0].jets.pt > 20).count()].pt` works, however. TODO - make this sort of expression an error (the first of these two!) Actually even the above - what does that mean? Isn't the right way to do that is `d1[(d[d.x > 0].jets[d.jets.pt>0].count())]` or similar? Ugh. Ok - the thing to do for now is be strict, and we can add things which make life easier later.
 
-- Sometimes functions are defined in palces they make no sense. For example, the `abs` (or any `numpy` function) is defined always, even if your `DataFrame` represents a collection of jets. A reason to have `columns` and `collections` as different objects to help the user, and help editors guess possibilities.
+- Sometimes functions are defined in places they make no sense. For example, the `abs` (or any `numpy` function) is defined always, even if your `DataFrame` represents a collection of jets. A reason to have `columns` and `collections` as different objects to help the user, and help editors guess possibilities.
 
-- There should be no concept of `parent` in a `DataFrame`. The expression should be everything, and point to any referenced objects. This will be especially true if mutliple root `DataFrame`'s are ever to be used.
+- There should be no concept of `parent` in a `DataFrame`. The expression should be everything, and point to any referenced objects. This will be especially true if multiple root `DataFrame`'s are ever to be used.
 
 - Is it important to define new columns using the '=' sign? e.g. `df.jets.ptgev = df.jets.pt/1000.0`?
 
