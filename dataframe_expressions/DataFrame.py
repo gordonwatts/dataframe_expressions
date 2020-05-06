@@ -109,8 +109,14 @@ class DataFrame:
             p = p.parent
             if p is not None:
                 if name in p._sub_df and ((not computed_col_only) or p._sub_df[name].computed_col):
+                    # Defined column with extension mechanism
                     expr = p._sub_df[name].render(p)
                     return expr, p, filters
+
+                defined = getattr(p, name, None)
+                if defined is not None:
+                    # Column is coded in
+                    return defined, p, filters
 
                 p = p.parent
                 if p is not None and p.child_expr is not None:
