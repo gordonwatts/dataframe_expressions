@@ -1,5 +1,5 @@
 import ast
-from typing import Callable, Union, Optional
+from typing import Callable, Union, Optional, TypeVar
 import inspect
 
 from dataframe_expressions import (
@@ -79,7 +79,10 @@ def user_func(f: Callable) -> Callable:
     return emulate_function_call_in_DF
 
 
-def exclusive_class(o_class: Callable[[object], object]) -> Callable[[object], object]:
+T = TypeVar('T')
+
+
+def exclusive_class(o_class: T) -> T:
     '''
     A class that will extend the object model can only access properties that
     are explicitly defined.
