@@ -11,7 +11,7 @@ class multi_leaf_object(DataFrame):
         DataFrame.__init__(self, df)
 
     @property
-    def x1(self):
+    def x1(self) -> DataFrame:
         return self.x_new_1
 
 
@@ -20,7 +20,7 @@ class leaf_object(DataFrame):
         DataFrame.__init__(self, df)
 
     @property
-    def x2(self):
+    def x2(self) -> DataFrame:
         return self.x1
 
 
@@ -58,7 +58,7 @@ class multi_leaf_object_excl(DataFrame):
         DataFrame.__init__(self, df)
 
     @property
-    def x1(self):
+    def x1(self) -> DataFrame:
         return self.x_new_1
 
 
@@ -68,7 +68,7 @@ class leaf_object_excl(DataFrame):
         DataFrame.__init__(self, df)
 
     @property
-    def x2(self):
+    def x2(self) -> DataFrame:
         return self.x1
 
 
@@ -107,7 +107,7 @@ class vec(DataFrame):
         DataFrame.__init__(self, df)
 
     @property
-    def xy(self):
+    def xy(self) -> DataFrame:
         from numpy import sqrt
         return sqrt(self.x*self.x + self.y*self.y)
 
