@@ -79,6 +79,14 @@ def user_func(f: Callable) -> Callable:
     return emulate_function_call_in_DF
 
 
+def exclusive_class(o: Callable[[object], object]) -> Callable[[object], object]:
+    '''
+    A class that will extend the object model can only access properties that
+    are explicitly defined.
+    '''
+    return o
+
+
 def _replace_parent_references(a: ast.AST, sub: DataFrame) -> ast.AST:
     '''
     Find Name(id='p') and replace them with sub in a.
