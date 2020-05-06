@@ -1,5 +1,7 @@
+from __future__ import annotations
 import ast
 import pytest
+from typing import Optional, Callable, Any
 
 from dataframe_expressions import DataFrame, render, exclusive_class
 
@@ -102,14 +104,45 @@ def test_collection_nested_excl():
     assert ast.dump(expr) == "Attribute(value=ast_DataFrame(), attr='x_new_1', ctx=Load())"
 
 
+class op_base:
+    def render(self, f: Callable[[vec], Any]) -> Any:
+        assert False, 'not implemented'
+
+
+class op_bin(op_base):
+    def __init__(self, a: op_base, b: op_base):
+        self._a = a
+        self._b = b
+
+    def render(self, f: Callable[[vec], Any]) -> Any:
+        return self._a.render(f) + self._b.render(f)
+
+
+class op_vec(op_base):
+    def __init__(self, a: vec):
+        self._a = a
+
+    def render(self, f: Callable[[vec], Any]) -> Any:
+        return f(self._a)
+
+
 class vec(DataFrame):
-    def __init__(self, df: DataFrame) -> None:
+    def __init__(self, df: DataFrame, compound: Optional[op_base] = None) -> None:
         DataFrame.__init__(self, df)
+        self._ref: op_base = compound if compound is not None else op_vec(self)
 
     @property
     def xy(self) -> DataFrame:
         from numpy import sqrt
-        return sqrt(self.x*self.x + self.y*self.y)
+        bx = self._ref.render(lambda v: v.x)
+        by = self._ref.render(lambda v: v.y)
+        return sqrt(bx*bx + by*by)
+
+    def __add__(self, other: vec) -> vec:
+        'Do the addition'
+        assert isinstance(other, vec)
+        assert self.parent is not None
+        return vec(self.parent, op_bin(self._ref, other._ref))
 
 
 def test_xy():
@@ -118,7 +151,11 @@ def test_xy():
     df1 = v.xy
 
     expr, _ = render(df1)
-    assert ast.dump(expr) == 'boom'
+    assert isinstance(expr, ast.Call)
+    assert isinstance(expr.func, ast.Attribute)
+    assert expr.func.attr == 'sqrt'
+    assert isinstance(expr.func.value, ast.BinOp)
+    assert isinstance(expr.func.value.op, ast.Add)
 
 
 def test_add_xy():
@@ -128,4 +165,18 @@ def test_add_xy():
     df1 = (x1 + x2).xy
 
     expr, _ = render(df1)
-    assert ast.dump(expr) == 'boom'
+    assert isinstance(expr, ast.Call)
+    assert isinstance(expr.func, ast.Attribute)
+    assert expr.func.attr == 'sqrt'
+    assert isinstance(expr.func.value, ast.BinOp)
+    assert isinstance(expr.func.value.op, ast.Add)
+
+    x_component2 = expr.func.value.left
+    assert isinstance(x_component2, ast.BinOp)
+    assert isinstance(x_component2.op, ast.Mult)
+
+    x_component = x_component2.left
+    assert isinstance(x_component, ast.BinOp)
+    assert ast.dump(x_component) == "BinOp(left=Attribute(value=Attribute(value=ast_DataFrame(), attr='x', ctx=Load()), attr='x', ctx=Load()), " \
+        "op=Add(), " \
+        "right=Attribute(value=Attribute(value=ast_DataFrame(), attr='y', ctx=Load()), attr='x', ctx=Load()))"
