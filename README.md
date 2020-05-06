@@ -153,6 +153,37 @@ jetpt_in_gev = df.jets[df.jets.ptgev > 30].ptgev
 
 The prototype implementation is particularly fragile - but that is due to poor design rather than a technical limitation.
 
+### Adding to the data model using objects
+
+Another way to do this is build an object. For example, lets say you want to make it easy to do 3-vector operations. You might write something like this:
+
+```
+class vec(DataFrame):
+    def __init__(self, df: DataFrame):
+        DataFrame.__init__(self, df)
+
+    @property
+    def x(self) -> DataFrame:
+        return self.x
+    @property
+    def y(self) -> DataFrame:
+        return self.y
+    @property
+    def z(self) -> DataFrame:
+        return self.z
+
+    @property
+    def xy(self) -> DataFrame:
+        import numpy as np
+        return np.sqrt(self.x*self.x + self.y*self.y)
+```
+
+Now you can write `v.xy` and you have the `L_xy` distance from the origin. It is also possible to implement vector operations. This library doesn't help you with that, but it isn't difficult.
+
+You can add the class decorator `exclusive_class` if you only want the supplied properties to be available (so `v.zz` would cause an error).
+
+The extra work to support this is almost trivial - see test cases, even one with vector addition, in the file `test_object.py` for further examples.
+
 ### Adding to the data model using an Alias
 
 This is a simple feature which allows you to invent short hand for more complex expressions. This makes it easy to use. Further, the backend never knows about these short-hand scripts - they are just substituted in on the fly as the DAG is built. For example, in the ATLAS experiment I to access jet pT in GeV i need to always divide by 1000. So:
