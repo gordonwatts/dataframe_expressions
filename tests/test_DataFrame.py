@@ -103,7 +103,6 @@ def test_mask_operator_and_attributes():
     assert ast.dump(ref3.child_expr) == "BoolOp(op=And(), values=[ast_DataFrame(), ast_DataFrame()])"
 
 
-
 def test_mask_operator_or_attributes():
     d = DataFrame()
     ref1 = d.x
