@@ -113,10 +113,11 @@ class DataFrame:
                     expr = p._sub_df[name].render(p)
                     return expr, p, filters
 
-                defined = getattr(p, name, None)
-                if defined is not None:
-                    # Column is coded in
-                    return defined, p, filters
+                if name in dir(p):
+                    # Column is defined in the object
+                    # We don't call hasattr as we don't want to generate a new attribute.
+                    expr = getattr(p, name)
+                    return expr, p, filters
 
                 p = p.parent
                 if p is not None and p.child_expr is not None:
@@ -170,8 +171,13 @@ class DataFrame:
                     df = attr._replace_root_expr(parent, filters)
                     result = df
 
-            # Ok - in that case, this is a straight attribute.
+            # Ok - in that case, this is a straight attribute, as long
+            # as we are allowed to do the lookup.
             if result is None:
+                if '__no_arb_attr' in dir(self):
+                    # Oooo - they are trying to access something we don't know about!
+                    raise Exception(f'No such attribute explicitly defined ("{name}")')
+
                 child_expr = ast.Attribute(value=ast.Name(id='p', ctx=ast.Load()), attr=name,
                                            ctx=ast.Load())
                 result = DataFrame(self, child_expr)

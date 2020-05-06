@@ -59,7 +59,7 @@ class multi_leaf_object_excl(DataFrame):
 
     @property
     def x1(self) -> DataFrame:
-        return self.x_new_1
+        return self.parent.x_new_1
 
 
 @exclusive_class
@@ -69,7 +69,7 @@ class leaf_object_excl(DataFrame):
 
     @property
     def x2(self) -> DataFrame:
-        return self.x1
+        return self.parent.x1
 
 
 def test_collection_object_excl():
@@ -89,7 +89,7 @@ def test_collection_object_other_excl():
 
         expr, _ = render(df1)
 
-    assert 'not such property' in str(e.value())
+    assert 'No such attribute' in str(e.value)
 
 
 def test_collection_nested_excl():

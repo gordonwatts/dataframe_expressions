@@ -79,12 +79,21 @@ def user_func(f: Callable) -> Callable:
     return emulate_function_call_in_DF
 
 
-def exclusive_class(o: Callable[[object], object]) -> Callable[[object], object]:
+def exclusive_class(o_class: Callable[[object], object]) -> Callable[[object], object]:
     '''
     A class that will extend the object model can only access properties that
     are explicitly defined.
     '''
-    return o
+    orig_init = o_class.__init__
+
+    def __init__(self, *args, **kws):
+        # The `__no_arb_attr` is a magic string and appears elsewhere in the code
+        # as a flag (its value does not matter)
+        self.__no_arb_attr = True
+        orig_init(self, *args, **kws)  # Call the original __init__
+
+    o_class.__init__ = __init__  # Set the class' __init__ to the new one
+    return o_class
 
 
 def _replace_parent_references(a: ast.AST, sub: DataFrame) -> ast.AST:
