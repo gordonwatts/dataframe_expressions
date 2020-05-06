@@ -57,6 +57,11 @@ class _sub_link_info:
             return DataFrame(df, expr=expr)
 
 
+def _do_not_extend(o: object):
+    'Test if the object has the "no-extend" flag'
+    return '__no_arb_attr' in dir(o)
+
+
 class DataFrame:
     '''
     Base class for building a dataframe expression.
@@ -174,7 +179,7 @@ class DataFrame:
             # Ok - in that case, this is a straight attribute, as long
             # as we are allowed to do the lookup.
             if result is None:
-                if '__no_arb_attr' in dir(self):
+                if _do_not_extend(self):
                     # Oooo - they are trying to access something we don't know about!
                     raise Exception(f'No such attribute explicitly defined ("{name}")')
 
@@ -250,10 +255,16 @@ class DataFrame:
                                         for k, v in kwargs.items()])
         return DataFrame(self.parent, child_expr)
 
+    def _test_for_extension(self, name: str):
+        'If we have the no-extension flag, then bomb out'
+        if _do_not_extend(self):
+            raise Exception(f'Object {type(self).__name__} does not have "{name}" defined')
+
     def __abs__(self):
         '''
         Take the absolute value of ourselves using the python default syntax.
         '''
+        self._test_for_extension('abs')
         child_expr = ast.Call(func=ast.Attribute(value=ast.Name('p', ctx=ast.Load()),
                                                  attr='abs', ctx=ast.Load()),
                               args=[], keywords=[])
@@ -261,17 +272,20 @@ class DataFrame:
 
     def __invert__(self) -> DataFrame:
         ''' Invert, or logical NOT operation. '''
+        self._test_for_extension('operator invert')
         child_expr = ast.UnaryOp(op=ast.Invert(), operand=ast.Name('p', ctx=ast.Load()))
         return DataFrame(self, child_expr)
 
     def __and__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
+        self._test_for_extension('operator and')
         from .utils import _term_to_ast
         return Column(type(bool), ast.BoolOp(op=ast.And(),
                       values=[_term_to_ast(self, self._parent), _term_to_ast(other, self)]))
 
     def __or__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
+        self._test_for_extension('operator or')
         from .utils import _term_to_ast
         return Column(type(bool), ast.BoolOp(op=ast.Or(),
                       values=[ast.Name('p', ctx=ast.Load()), _term_to_ast(other, self)]))
@@ -299,36 +313,46 @@ class DataFrame:
 
     def __lt__(self, other) -> Column:
         ''' x < y '''
+        self._test_for_extension('operator lt')
         return self.__binary_operator_compare(ast.Lt(), other)
 
     def __le__(self, other) -> Column:
         ''' x < y '''
+        self._test_for_extension('operator le')
         return self.__binary_operator_compare(ast.LtE(), other)
 
     def __eq__(self, other) -> Column:
         ''' x < y '''
+        self._test_for_extension('operator eq')
         return self.__binary_operator_compare(ast.Eq(), other)
 
     def __ne__(self, other) -> Column:
         ''' x < y '''
+        self._test_for_extension('operator ne')
         return self.__binary_operator_compare(ast.NotEq(), other)
 
     def __gt__(self, other) -> Column:
         ''' x < y '''
+        self._test_for_extension('operator gt')
         return self.__binary_operator_compare(ast.Gt(), other)
 
     def __ge__(self, other) -> Column:
         ''' x < y '''
+        self._test_for_extension('operator ge')
         return self.__binary_operator_compare(ast.GtE(), other)
 
     def __truediv__(self, other) -> DataFrame:
+        self._test_for_extension('operator truediv')
         return self.__binary_operator(ast.Div(), other)
 
     def __mul__(self, other) -> DataFrame:
+        self._test_for_extension('operator mul')
         return self.__binary_operator(ast.Mult(), other)
 
     def __add__(self, other) -> DataFrame:
+        self._test_for_extension('operator add')
         return self.__binary_operator(ast.Add(), other)
 
     def __sub__(self, other) -> DataFrame:
+        self._test_for_extension('operator sub')
         return self.__binary_operator(ast.Sub(), other)

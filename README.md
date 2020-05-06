@@ -262,3 +262,5 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
 - Is it important to define new columns using the '=' sign? e.g. `df.jets.ptgev = df.jets.pt/1000.0`?
 
 - The rule that every expression that is the same implies the same implied iterator. That means the current code can't do 2 jets, for example. There are several ways to "fix" this, however, the biggest question: is this reasonable?
+
+- The ability to have an `exclusive_object` is implemented at runtime - perhaps we can come up with a scheme where we just define objects and they "fit" in correctly? Thus editors, etc., would be able to tag this as a problem.

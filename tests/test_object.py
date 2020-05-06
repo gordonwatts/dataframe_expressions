@@ -35,6 +35,16 @@ def test_collection_object():
     assert ast.dump(expr) == "Attribute(value=ast_DataFrame(), attr='x_new_1', ctx=Load())"
 
 
+def test_collection_subtract():
+    df = DataFrame()
+    mlo1 = multi_leaf_object(df.m1)
+    mlo2 = multi_leaf_object(df.m2)
+    df1 = mlo1-mlo2
+
+    expr, _ = render(df1)
+    assert ast.dump(expr) == "BinOp(left=Attribute(value=ast_DataFrame(), attr='m1', ctx=Load()), op=Sub(), right=Attribute(value=ast_DataFrame(), attr='m2', ctx=Load()))"
+
+
 def test_collection_object_other():
     df = DataFrame()
     mlo = multi_leaf_object(df)
@@ -81,6 +91,17 @@ def test_collection_object_excl():
 
     expr, _ = render(df1)
     assert ast.dump(expr) == "Attribute(value=ast_DataFrame(), attr='x_new_1', ctx=Load())"
+
+
+def test_collection_subtract_excl():
+    df = DataFrame()
+    mlo1 = multi_leaf_object_excl(df.m1)
+    mlo2 = multi_leaf_object_excl(df.m2)
+    with pytest.raises(Exception) as e:
+        mlo1-mlo2
+
+    assert "operator" in str(e.value)
+    assert "multi_leaf_object" in str(e.value)
 
 
 def test_collection_object_other_excl():
