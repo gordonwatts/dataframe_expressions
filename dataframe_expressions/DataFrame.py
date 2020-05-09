@@ -12,7 +12,7 @@ class Column:
     It is a sequence of items, assumed to be of the same type.
     '''
     def __init__(self, t: Any, expr: ast.AST):
-        self.child_expr = expr
+        self.child_expr: ast.AST = expr
         self._fields = ('child_expr',)
         self.type = t
 
@@ -84,7 +84,7 @@ class DataFrame:
         '''
         self.parent: Optional[DataFrame] = pnt
         self.child_expr: Optional[ast.AST] = expr
-        self.filter = filter
+        self.filter: Optional[Column] = filter
         self._sub_df: Dict[str, _sub_link_info] = {}
 
         if df_to_copy is not None:
