@@ -29,11 +29,12 @@ class ast_Callable(ast.AST):
         extension method!
         '''
         ast.AST.__init__(self)
-        if callable.__name__ == '<lambda>':
-            self.name = f'lambda-{callable.__code__.co_filename}:' \
-                        f'{callable.__code__.co_firstlineno}'
-        else:
-            self.name = callable.__name__
+        if callable is not None:
+            if callable.__name__ == '<lambda>':
+                self.name = f'lambda-{callable.__code__.co_filename}:' \
+                            f'{callable.__code__.co_firstlineno}'
+            else:
+                self.name = callable.__name__
         self._fields = ('name',)
         self.callable = callable
         self.dataframe = relative_to
