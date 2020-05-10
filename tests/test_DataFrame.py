@@ -375,3 +375,47 @@ def test_lambda_in_filter():
     assert df1.filter is not None
     assert isinstance(df1.filter, Column)
     assert isinstance(df1.filter.child_expr, ast.Call)
+
+
+def test_shallow_copy():
+    df = DataFrame()
+    import copy
+    df1 = copy.copy(df)
+
+    assert df1 is not df
+    assert df1.child_expr is None
+    assert df1.filter is None
+
+
+def test_shallow_copy_1():
+    df = DataFrame()
+    df1 = df.x
+    import copy
+    df2 = copy.copy(df1)
+
+    assert df2 is not df1
+    assert df2.child_expr is not None
+    assert df2.filter is None
+    assert df2.parent is df
+
+
+def test_deep_copy():
+    df = DataFrame()
+    import copy
+    df1 = copy.deepcopy(df)
+
+    assert df1 is not df
+    assert df1.child_expr is None
+    assert df1.filter is None
+
+
+def test_deep_copy_1():
+    df = DataFrame()
+    df1 = df.x
+    import copy
+    df2 = copy.deepcopy(df1)
+
+    assert df2 is not df1
+    assert df2.child_expr is not None
+    assert df2.filter is None
+    assert df2.parent is not df

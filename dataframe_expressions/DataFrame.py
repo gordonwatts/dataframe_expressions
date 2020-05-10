@@ -69,7 +69,7 @@ class DataFrame:
     Notes:
         - Any properties we have here will hide the name of a column in this data frame
     '''
-    def __init__(self, pnt: DataFrame = None,
+    def __init__(self, pnt: Optional[DataFrame] = None,
                  expr: Optional[ast.AST] = None,
                  filter: Optional[Column] = None,
                  df_to_copy: Optional[DataFrame] = None):
@@ -156,6 +156,9 @@ class DataFrame:
 
     def __getattr__(self, name: str) -> DataFrame:
         '''Reference a column name'''
+        if name.startswith('_'):
+            raise AttributeError(name)
+
         # Have we done this before?
         if name not in self._sub_df:
             result = None
@@ -281,7 +284,7 @@ class DataFrame:
         self._test_for_extension('operator and')
         from .utils import _term_to_ast
         return Column(type(bool), ast.BoolOp(op=ast.And(),
-                      values=[_term_to_ast(self, self._parent), _term_to_ast(other, self)]))
+                      values=[_term_to_ast(self, self.parent), _term_to_ast(other, self)]))
 
     def __or__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
