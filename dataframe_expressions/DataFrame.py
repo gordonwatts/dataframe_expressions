@@ -193,11 +193,18 @@ class DataFrame:
             self._sub_df[name] = _sub_link_info(result, False)
         return self._sub_df[name].render(self)
 
-    def __getitem__(self, expr: Union[Callable, DataFrame, Column]) -> DataFrame:
+    def __getitem__(self, expr: Union[Callable, DataFrame, Column, int]) -> DataFrame:
         '''A filtering operation of some sort'''
-        assert isinstance(expr, DataFrame) or isinstance(expr, Column) or callable(expr), \
+        assert isinstance(expr, (DataFrame, Column, int)) or callable(expr), \
             "Filtering a data frame must be done by a DataFrame expression " \
-            f"(type: DataFrame or Column) not '{type(expr).__name__}'"
+            f"(type: DataFrame or Column or int) not '{type(expr).__name__}'"
+
+        if isinstance(expr, int):
+            c_expr = ast.Subscript(
+                value=ast.Name(id='p'),
+                slice=ast.Index(value=expr)
+            )
+            return DataFrame(self, c_expr)
 
         if callable(expr) and not (isinstance(expr, DataFrame) or isinstance(expr, Column)):
             c_expr = expr(self)

@@ -158,6 +158,16 @@ def test_masking_df():
     assert ast.dump(d1.filter.child_expr) == "Compare(left=ast_DataFrame(), ops=[Gt()], comparators=[Num(n=10)])"
 
 
+def test_slicing_df():
+    d = DataFrame()
+    d1 = d[10]
+    assert isinstance(d1, DataFrame)
+    assert d1.parent is d
+    assert isinstance(d1.child_expr, ast.Subscript)
+    assert isinstance(d1.child_expr.slice, ast.Index)
+    assert d1.child_expr.slice.value == 10
+
+
 def test_math_division():
     d = DataFrame()
     d1 = d.x/1000

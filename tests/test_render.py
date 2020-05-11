@@ -109,6 +109,15 @@ def test_simple_filter():
     assert expr.expr is l_value
 
 
+def test_simple_slice():
+    d = DataFrame()
+    d1 = d[0]
+    expr, _ = render(d1)
+
+    assert isinstance(expr, ast.Subscript)
+    assert isinstance(expr.value, ast_DataFrame)
+
+
 def test_simple_filter_func():
     def test(j):
         return j.x > 0
