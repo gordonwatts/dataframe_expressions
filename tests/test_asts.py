@@ -2,6 +2,7 @@ import ast
 
 from dataframe_expressions import DataFrame
 from dataframe_expressions import ast_Callable, ast_FunctionPlaceholder
+from dataframe_expressions import ast_DataFrame
 
 
 def test_func_place_different():
@@ -72,3 +73,8 @@ def test_callable_lambda_same():
     c2 = ast_Callable(f, d)
 
     assert ast.dump(c1) == ast.dump(c2)
+
+
+def test_df_none():
+    'Need to make sure the blank ctor is legal for deep copy reasons'
+    _ = ast_DataFrame()

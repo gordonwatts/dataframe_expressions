@@ -6,11 +6,13 @@ class ast_DataFrame(ast.AST):
     '''
     Hold onto a dataframe reference
     '''
+    _fields = ()
 
     def __init__(self, dataframe=None):
         ast.AST.__init__(self)
-        self._fields = ()
-        self.dataframe = dataframe
+        from .DataFrame import DataFrame
+        assert dataframe is None or isinstance(dataframe, DataFrame)
+        self.dataframe = cast(DataFrame, dataframe)
 
 
 class ast_Column(ast.AST):
@@ -21,7 +23,7 @@ class ast_Column(ast.AST):
         ast.AST.__init__(self)
         from .DataFrame import Column
         assert isinstance(col, Column)
-        self.column: Column = cast(Column, col)
+        self.column = cast(Column, col)
 
 
 class ast_Callable(ast.AST):
