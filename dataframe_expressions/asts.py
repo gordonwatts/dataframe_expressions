@@ -1,5 +1,5 @@
 import ast
-from typing import Callable
+from typing import Callable, cast
 
 
 class ast_DataFrame(ast.AST):
@@ -7,7 +7,7 @@ class ast_DataFrame(ast.AST):
     Hold onto a dataframe reference
     '''
 
-    def __init__(self, dataframe = None):
+    def __init__(self, dataframe=None):
         ast.AST.__init__(self)
         self._fields = ()
         self.dataframe = dataframe
@@ -15,10 +15,13 @@ class ast_DataFrame(ast.AST):
 
 class ast_Column(ast.AST):
     '''Ast that holds onto a DataFrame reference'''
-    def __init__(self, col = None):
+    _fields = ()
+
+    def __init__(self, col=None):
         ast.AST.__init__(self)
-        self._fields = ()
-        self.column = col
+        from .DataFrame import Column
+        assert isinstance(col, Column)
+        self.column: Column = cast(Column, col)
 
 
 class ast_Callable(ast.AST):
