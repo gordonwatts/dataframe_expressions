@@ -22,7 +22,7 @@ class ast_Column(ast.AST):
     def __init__(self, col=None):
         ast.AST.__init__(self)
         from .DataFrame import Column
-        assert isinstance(col, Column)
+        assert col is None or isinstance(col, Column)
         self.column = cast(Column, col)
 
 

@@ -2,7 +2,7 @@ import ast
 
 from dataframe_expressions import DataFrame
 from dataframe_expressions import ast_Callable, ast_FunctionPlaceholder
-from dataframe_expressions import ast_DataFrame
+from dataframe_expressions import ast_DataFrame, ast_Column
 
 
 def test_func_place_different():
@@ -78,3 +78,7 @@ def test_callable_lambda_same():
 def test_df_none():
     'Need to make sure the blank ctor is legal for deep copy reasons'
     _ = ast_DataFrame()
+
+
+def test_col_none():
+    _ = ast_Column()
