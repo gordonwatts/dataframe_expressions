@@ -28,6 +28,9 @@ class ast_Column(ast.AST):
 
 class ast_Callable(ast.AST):
     'An AST node that is some sort of python callable, along with the df it was called from.'
+
+    _fields = ('name',)
+
     def __init__(self, callable: Callable = None, relative_to=None):
         '''
         relative_to is optional - in which case this is a function call, not an
@@ -40,15 +43,16 @@ class ast_Callable(ast.AST):
                             f'{callable.__code__.co_firstlineno}'
             else:
                 self.name = callable.__name__
-        self._fields = ('name',)
         self.callable = callable
         self.dataframe = relative_to
 
 
 class ast_FunctionPlaceholder(ast.AST):
     'An AST node that represents a function to be called, that is a placeholder'
+
+    _fields = ('name',)
+
     def __init__(self, callable: Callable = None):
         ast.AST.__init__(self)
         self.name = callable.__name__
-        self._fields = ('name',)
         self.callable = callable
