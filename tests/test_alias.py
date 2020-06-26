@@ -71,7 +71,7 @@ def test_resolve_wilecard_good_2():
     assert r is not None
 
 
-def test_resolve_wilecard_ngood():
+def test_resolve_wilecard_nogood():
     define_alias("", "pts", lambda j: j.pt / 1000.0)
     df = DataFrame()
     r = lookup_alias(df, "pt")
@@ -181,7 +181,7 @@ def test_resolve_hidden_name():
 #     assert isinstance(d1.parent.child_expr, ast.Attribute)
 
 
-# def test_run_with_alias_generic_with_path_nomatch():
+# def test_run_with_alias_generic_with_path_no_match():
 #     define_alias("jets", "pts", lambda j: j.pt / 1000.0)
 #     df = DataFrame()
 #     d1 = df.Electrons.pts

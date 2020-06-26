@@ -1,7 +1,7 @@
 from __future__ import annotations
 import ast
 import logging
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from .asts import ast_Callable, ast_DataFrame
 from .utils_ast import CloningNodeTransformer
@@ -259,8 +259,10 @@ class DataFrame:
             'Cannot call a DataFrame directly - must be a function name!'
         from .utils import _term_to_ast
         assert isinstance(self.child_expr, ast.Attribute)
+        assert isinstance(self.child_expr.value, ast_DataFrame)
+        base_df = cast(ast_DataFrame, self.child_expr.value)
         child_expr = ast.Call(func=self.child_expr,
-                              args=[_term_to_ast(a, self.child_expr.value.dataframe) for a in inputs],
+                              args=[_term_to_ast(a, base_df.dataframe) for a in inputs],
                               keywords=[ast.keyword(arg=k, value=_term_to_ast(v, self))
                                         for k, v in kwargs.items()])
         return DataFrame(expr=child_expr)

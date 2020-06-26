@@ -36,7 +36,7 @@ def test_lambda_for_computed_col():
     a = expr_1.args[0]
     assert isinstance(a, ast.Attribute)
 
-    expr_2, _ = render_callable(expr_1.func, context_1, expr_1.func.dataframe)
+    expr_2, _ = render_callable(expr_1.func, context_1, expr_1.func.dataframe)  # type: ignore
     assert isinstance(expr_2, ast.BinOp)
     assert isinstance(expr_2.left, ast.Attribute)
     assert expr_2.left.value is a
@@ -107,7 +107,7 @@ def test_second_dr_returns_filtered():
             assert len(a.args) == 1
             # arg = self.visit(a.args[0])
 
-            expr, new_context = render_callable(a.func, self._context, a.func.dataframe)
+            expr, new_context = render_callable(a.func, self._context, a.func.dataframe)  # type: ignore
             old_context = self._context
             try:
                 self._context = new_context

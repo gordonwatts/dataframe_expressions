@@ -21,7 +21,7 @@ def test_DF_user_func():
 
     f_c = d1.child_expr.func
     assert isinstance(f_c, ast_FunctionPlaceholder)
-    f_sig = inspect.signature(f_c.callable)
+    f_sig = inspect.signature(f_c.callable)  # type: ignore
     assert str(f_sig) == "(x: float) -> float"
 
     args = d1.child_expr.args
@@ -44,7 +44,7 @@ def test_DF_user_number_arg():
 
     f_c = d1.child_expr.func
     assert isinstance(f_c, ast_FunctionPlaceholder)
-    f_sig = inspect.signature(f_c.callable)
+    f_sig = inspect.signature(f_c.callable)  # type: ignore
     assert str(f_sig) == "(x: float, y: float) -> float"
 
     args = d1.child_expr.args
@@ -99,8 +99,8 @@ def test_DF_user_render():
     assert a1.dataframe is d
 
     assert isinstance(call.func, ast_FunctionPlaceholder)
-    callable = call.func  # type: ast_FunctionPlaceholder
-    f = callable.callable
+    callable = call.func
+    f = callable.callable  # type: ignore
     assert f.__name__ == 'func1'
 
 
