@@ -1,4 +1,5 @@
 import ast
+from typing import Optional, List, cast
 
 from dataframe_expressions import Column, DataFrame, ast_DataFrame, define_alias
 from dataframe_expressions import ast_Callable, ast_Column
@@ -18,6 +19,20 @@ from .utils_for_testing import reset_var_counter  # NOQA
 #          won't be. Perhaps when we have an actual problem we can resolve this.
 
 
+def find_df(a: Optional[ast.AST]) -> List[ast_DataFrame]:
+    result: List[ast_DataFrame] = []
+
+    class find_it(ast.NodeVisitor):
+        def visit_ast_DataFrame(self, a: ast_DataFrame):
+            result.append(a)
+
+    if a is None:
+        return []
+
+    find_it().visit(a)
+    return result
+
+
 def test_empty_ctor():
     DataFrame()
 
@@ -30,7 +45,7 @@ def test_dataframe_attribute():
     assert ref.parent == d
     assert hasattr(ref, 'child_expr')
     assert isinstance(ref.child_expr, ast.AST)
-    assert ast.dump(ref.child_expr) == "Attribute(value=Name(id='p', ctx=Load()), attr='x', ctx=Load())"
+    assert ast.dump(ref.child_expr) == "Attribute(value=ast_DataFrame(), attr='x', ctx=Load())"
 
 
 def test_mask_operator_const_lt_const():
@@ -42,7 +57,10 @@ def test_mask_operator_const_lt_const():
     assert isinstance(ref.child_expr, ast.Compare)
     df = ref.child_expr.left  # type: ast.AST
     assert isinstance(df, ast_DataFrame)
-    assert df.dataframe.parent is d
+    parents = find_df(df.dataframe.child_expr)
+    assert len(parents) == 1
+
+    assert parents[0].dataframe is d
 
 
 def test_mask_operator_2nd_dataframe():
@@ -54,7 +72,9 @@ def test_mask_operator_2nd_dataframe():
     assert isinstance(ref.child_expr, ast.Compare)
     df = ref.child_expr.left  # type: ast.AST
     assert isinstance(df, ast_DataFrame)
-    assert df.dataframe.parent is d
+    parents = find_df(df.dataframe.child_expr)
+    assert len(parents) == 1
+    assert parents[0].dataframe is d
 
 
 def test_mask_operator_const_le():
@@ -123,7 +143,8 @@ def test_mask_operator_invert_attributes():
     d = DataFrame()
     ref1 = d.x
     ref3 = ~ref1
-    assert ast.dump(ref3.child_expr) == "UnaryOp(op=Invert(), operand=Name(id='p', ctx=Load()))"
+    assert ref3.child_expr is not None
+    assert ast.dump(ref3.child_expr) == "UnaryOp(op=Invert(), operand=ast_DataFrame())"
 
 
 def test_mask_operator_or():
@@ -145,7 +166,7 @@ def test_invert_dataframe():
     d = DataFrame()
     ref1 = ~d
     assert ref1.child_expr is not None
-    assert ast.dump(ref1.child_expr) == "UnaryOp(op=Invert(), operand=Name(id='p', ctx=Load()))"
+    assert ast.dump(ref1.child_expr) == "UnaryOp(op=Invert(), operand=ast_DataFrame())"
     assert ref1.filter is None
 
 
@@ -153,7 +174,6 @@ def test_masking_df():
     d = DataFrame()
     d1 = d[d.x > 10]
     assert isinstance(d1, DataFrame)
-    assert d1.child_expr is None
     assert isinstance(d1.filter, Column)
     assert ast.dump(d1.filter.child_expr) == "Compare(left=ast_DataFrame(), ops=[Gt()], comparators=[Num(n=10)])"
 
@@ -162,9 +182,9 @@ def test_slicing_df():
     d = DataFrame()
     d1 = d[10]
     assert isinstance(d1, DataFrame)
-    assert d1.parent is d
     assert isinstance(d1.child_expr, ast.Subscript)
     assert isinstance(d1.child_expr.slice, ast.Index)
+    assert isinstance(d1.child_expr.value, ast_DataFrame)
     assert d1.child_expr.slice.value == 10
 
 
@@ -173,7 +193,7 @@ def test_math_division():
     d1 = d.x/1000
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1000))"
 
 
 def test_math_mult():
@@ -181,7 +201,7 @@ def test_math_mult():
     d1 = d.x*1000
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Mult(), right=Num(n=1000))"
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Mult(), right=Num(n=1000))"
 
 
 def test_math_sub():
@@ -189,7 +209,7 @@ def test_math_sub():
     d1 = d.x-1000
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Sub(), right=Num(n=1000))"
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Sub(), right=Num(n=1000))"
 
 
 def test_math_add():
@@ -197,15 +217,16 @@ def test_math_add():
     d1 = d.x+1000
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Add(), right=Num(n=1000))"
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Add(), right=Num(n=1000))"
 
 
 def test_np_sin():
     import numpy as np
     d = DataFrame()
-    d1 = np.sin(d.x)
+    d1 = cast(DataFrame, np.sin(d.x))  # type: ignore
     assert d1.filter is None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='sin', ctx=Load()), args=[], keywords=[])"
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='sin', ctx=Load()), args=[], keywords=[])"
 
 
 def test_python_abs():
@@ -213,24 +234,25 @@ def test_python_abs():
     d1 = abs(d.x)
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='abs', ctx=Load()), args=[], keywords=[])"
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='abs', ctx=Load()), args=[], keywords=[])"
 
 
 def test_np_sin_kwargs():
     import numpy as np
     d = DataFrame()
-    d1 = np.sin(d.x, bogus=22.0)
+    d1 = cast(DataFrame, np.sin(d.x, bogus=22.0))  # type: ignore
     assert d1.filter is None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='sin', ctx=Load()), args=[], keywords=[keyword(arg='bogus', value=Num(n=22.0))])"
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='sin', ctx=Load()), args=[], keywords=[keyword(arg='bogus', value=Num(n=22.0))])"
 
 
 def test_np_arctan2_with_args():
     import numpy as np
     d = DataFrame()
-    d1 = np.arctan2(d.x, 100.0)
+    d1 = cast(DataFrame, np.arctan2(d.x, 100.0))  # type: ignore
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='arctan2', ctx=Load()), args=[Num(n=100.0)], keywords=[])"
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='arctan2', ctx=Load()), args=[Num(n=100.0)], keywords=[])"
 
 
 def test_fluent_function_no_args():
@@ -238,7 +260,7 @@ def test_fluent_function_no_args():
     d1 = d.count()
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[], keywords=[])"
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='count', ctx=Load()), args=[], keywords=[])"
 
 
 def test_fluent_function_pos_arg():
@@ -246,7 +268,7 @@ def test_fluent_function_pos_arg():
     d1 = d.count(22.0)
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[Num(n=22.0)], keywords=[])"
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='count', ctx=Load()), args=[Num(n=22.0)], keywords=[])"
 
 
 def test_fluent_function_kwarg():
@@ -254,7 +276,7 @@ def test_fluent_function_kwarg():
     d1 = d.count(dude=22.0)
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[], keywords=[keyword(arg='dude', value=Num(n=22.0))])"
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='count', ctx=Load()), args=[], keywords=[keyword(arg='dude', value=Num(n=22.0))])"
 
 
 def test_test_fluent_function_df_arg():
@@ -263,7 +285,7 @@ def test_test_fluent_function_df_arg():
 
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
 
 
 def test_test_fluent_function_dfattr_arg():
@@ -272,7 +294,7 @@ def test_test_fluent_function_dfattr_arg():
 
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
 
 
 def test_test_fluent_function_dfattrattr_arg():
@@ -281,7 +303,7 @@ def test_test_fluent_function_dfattrattr_arg():
 
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
 
 
 def test_test_fluent_function_dfattr1_arg():
@@ -290,7 +312,7 @@ def test_test_fluent_function_dfattr1_arg():
 
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=Name(id='p', ctx=Load()), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
+    assert ast.dump(d1.child_expr) == "Call(func=Attribute(value=ast_DataFrame(), attr='count', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
 
 
 def test_resolve_simple_alias():
@@ -320,16 +342,19 @@ def test_resolve_dependent():
     assert df1.filter is None
     assert df1.child_expr is not None
     assert '1000' in ast.dump(df1.child_expr)
-    assert df1.parent is not None
-    p_df1 = df1.parent
-    assert p_df1.child_expr is not None
-    assert '2000' in ast.dump(p_df1.child_expr)
+    assert isinstance(df1.child_expr, ast.BinOp)
+    assert df1.child_expr.left is not None
+    assert isinstance(df1.child_expr.left, ast_DataFrame)
+    df2 = cast(ast_DataFrame, df1.child_expr.left)
+    assert df2.dataframe.child_expr is not None
+    assert '2000' in ast.dump(df2.dataframe.child_expr)
 
 
 def check_for_compare(e: ast.AST, check: str):
     assert isinstance(e, ast.Compare)
     left = e.left  # type: ast.AST
     assert isinstance(left, ast_DataFrame)
+    assert left.dataframe.child_expr is not None
     t = ast.dump(left.dataframe.child_expr)
     assert check in t
 
@@ -381,7 +406,7 @@ def test_lambda_in_filter():
     df = DataFrame()
     df1 = df[df.apply(lambda e: e == 1)]
 
-    assert df1.child_expr is None
+    assert isinstance(df1.child_expr, ast_DataFrame)
     assert df1.filter is not None
     assert isinstance(df1.filter, Column)
     assert isinstance(df1.filter.child_expr, ast.Call)
@@ -406,7 +431,6 @@ def test_shallow_copy_1():
     assert df2 is not df1
     assert df2.child_expr is not None
     assert df2.filter is None
-    assert df2.parent is df
 
 
 def test_deep_copy():

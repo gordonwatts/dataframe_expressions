@@ -1,16 +1,17 @@
 from __future__ import annotations
 import ast
-import pytest
-from typing import Optional, Callable, Any
+from typing import Any, Callable, Optional
 
-from dataframe_expressions import DataFrame, render, exclusive_class
+import pytest
+
+from dataframe_expressions import DataFrame, ast_DataFrame, exclusive_class, render
 
 from .utils_for_testing import reset_var_counter  # NOQA
 
 
 class multi_leaf_object(DataFrame):
     def __init__(self, df: DataFrame):
-        DataFrame.__init__(self, df)
+        DataFrame.__init__(self, expr=ast_DataFrame(df))
 
     @property
     def x1(self) -> DataFrame:
@@ -19,7 +20,7 @@ class multi_leaf_object(DataFrame):
 
 class leaf_object(DataFrame):
     def __init__(self, df: DataFrame):
-        DataFrame.__init__(self, df)
+        DataFrame.__init__(self, expr=ast_DataFrame(df))
 
     @property
     def x2(self) -> DataFrame:
@@ -67,21 +68,27 @@ def test_collection_nested():
 @exclusive_class
 class multi_leaf_object_excl(DataFrame):
     def __init__(self, df: DataFrame):
-        DataFrame.__init__(self, df)
+        DataFrame.__init__(self, expr=ast_DataFrame(df))
+        self.__p = df
 
     @property
     def x1(self) -> DataFrame:
-        return self.parent.x_new_1
+        return self.__p.x_new_1
 
+# TODO: As in README test out a class that defines a seeminly recursive definition of
+#       properties
+# TODO: See if we can't define this right above without the __p
+# TODO: Fix up the README
 
 @exclusive_class
 class leaf_object_excl(DataFrame):
     def __init__(self, df: DataFrame):
-        DataFrame.__init__(self, df)
+        DataFrame.__init__(self, expr=ast_DataFrame(df))
+        self.__p = df
 
     @property
     def x2(self) -> DataFrame:
-        return self.parent.x1
+        return self.__p.x1
 
 
 def test_collection_object_excl():
@@ -149,7 +156,7 @@ class op_vec(op_base):
 
 class vec(DataFrame):
     def __init__(self, df: DataFrame, compound: Optional[op_base] = None) -> None:
-        DataFrame.__init__(self, df)
+        DataFrame.__init__(self, expr=ast_DataFrame(df))
         self._ref: op_base = compound if compound is not None else op_vec(self)
 
     @property

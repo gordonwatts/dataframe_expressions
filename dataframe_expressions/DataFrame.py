@@ -3,7 +3,8 @@ import ast
 import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from .asts import ast_Callable
+from .asts import ast_Callable, ast_DataFrame
+from .utils_ast import CloningNodeTransformer
 
 
 class Column:
@@ -53,8 +54,8 @@ class _sub_link_info:
         else:
             assert callable(self._df), 'Internal Error - bad substitution'
             r = ast_Callable(self._df, df)
-            expr = ast.Call(func=r, args=[ast.Name(id='p', ctx=ast.Load())])
-            return DataFrame(df, expr=expr)
+            expr = ast.Call(func=r, args=[ast_DataFrame(df)])
+            return DataFrame(expr=expr)
 
 
 def _do_not_extend(o: object):
@@ -69,7 +70,7 @@ class DataFrame:
     Notes:
         - Any properties we have here will hide the name of a column in this data frame
     '''
-    def __init__(self, pnt: Optional[DataFrame] = None,
+    def __init__(self,
                  expr: Optional[ast.AST] = None,
                  filter: Optional[Column] = None,
                  df_to_copy: Optional[DataFrame] = None):
@@ -82,14 +83,12 @@ class DataFrame:
             filter      A filter to be applied
             df_to_copy  A dataframe to be copied from (like a clone operation)
         '''
-        self.parent: Optional[DataFrame] = pnt
         self.child_expr: Optional[ast.AST] = expr
         self.filter: Optional[Column] = filter
+
         self._sub_df: Dict[str, _sub_link_info] = {}
 
         if df_to_copy is not None:
-            self.child_expr = df_to_copy.child_expr
-            self.filter = df_to_copy.filter
             self._sub_df = df_to_copy._sub_df
 
     def check_attribute_name(self, name) -> None:
@@ -108,51 +107,54 @@ class DataFrame:
             if p.filter is not None:
                 filters.append(p.filter)
 
-            if p.child_expr is not None:
+            # Make sure we aren't changing the data - if so, then we
+            # can't walk back up further.
+            if not isinstance(p.child_expr, ast_DataFrame):
                 return None
 
-            p = p.parent
-            if p is not None:
-                if name in p._sub_df and ((not computed_col_only) or p._sub_df[name].computed_col):
-                    # Defined column with extension mechanism
-                    expr = p._sub_df[name].render(p)
-                    return expr, p, filters
+            p = p.child_expr.dataframe
+            if name in p._sub_df and ((not computed_col_only) or p._sub_df[name].computed_col):
+                # Defined column with extension mechanism
+                expr = p._sub_df[name].render(p)
+                return expr, p, filters
 
-                if name in dir(p):
-                    # Column is defined in the object
-                    # We don't call hasattr as we don't want to generate a new attribute.
-                    expr = getattr(p, name)
-                    return expr, p, filters
-
-                p = p.parent
-                if p is not None and p.child_expr is not None:
-                    return None
+            if name in dir(p):
+                # Column is defined in the object
+                # We don't call hasattr as we don't want to generate a new attribute.
+                expr = getattr(p, name)
+                return expr, p, filters
 
         return None
 
     def _replace_root_expr(self, parent: DataFrame, filters: List[Column]):
         '''
-        Find the parent in our hierarchy, and then insert the new stuff,
-        cloning the df as we go back
+        Look through our self, and anything attached to us for the parent dataframe.
+        Once we've found it, create a new one, and attach all filters to it.
         '''
         if self is parent:
             # Ok - we found the parent dataframe. Time to create new dataframes with
-            # filters.
+            # all filters strung on it.
             df = self
             for f in filters:
-                df = DataFrame(df, None, f)
+                df = DataFrame(expr=ast_DataFrame(df), filter=f)
             return df
 
-        if self.parent is None:
-            return self
+        # Now we need to recurse and find all data frames and rebuild them.
+        class search_for_ast(CloningNodeTransformer):
+            def __init__(self):
+                CloningNodeTransformer.__init__(self)
 
-        if self != parent:
-            df = self.parent._replace_root_expr(parent, filters)
-            # If no replacements happened, then do nothing.
-            if df is self.parent:
-                return self
-            # Clone.
-            return DataFrame(df, df_to_copy=self)
+            def visit_ast_DataFrame(self, a: ast_DataFrame):
+                new_df = a.dataframe._replace_root_expr(parent, filters)
+                if new_df is a.dataframe:
+                    return a
+                return ast_DataFrame(new_df)
+
+        sa_transform = search_for_ast()
+        new_child = None if self.child_expr is None else sa_transform.visit(self.child_expr)
+        if new_child is not self.child_expr:
+            return DataFrame(expr=new_child, filter=self.filter, df_to_copy=self)
+        return self
 
     def __getattr__(self, name: str) -> DataFrame:
         '''Reference a column name'''
@@ -186,9 +188,9 @@ class DataFrame:
                     # Oooo - they are trying to access something we don't know about!
                     raise Exception(f'No such attribute explicitly defined ("{name}")')
 
-                child_expr = ast.Attribute(value=ast.Name(id='p', ctx=ast.Load()), attr=name,
+                child_expr = ast.Attribute(value=ast_DataFrame(self), attr=name,
                                            ctx=ast.Load())
-                result = DataFrame(self, child_expr)
+                result = DataFrame(expr=child_expr)
 
             self._sub_df[name] = _sub_link_info(result, False)
         return self._sub_df[name].render(self)
@@ -201,10 +203,10 @@ class DataFrame:
 
         if isinstance(expr, int):
             c_expr = ast.Subscript(
-                value=ast.Name(id='p'),
+                value=ast_DataFrame(self),
                 slice=ast.Index(value=expr)
             )
-            return DataFrame(self, c_expr)
+            return DataFrame(expr=c_expr)
 
         if callable(expr) and not (isinstance(expr, DataFrame) or isinstance(expr, Column)):
             c_expr = expr(self)
@@ -215,13 +217,11 @@ class DataFrame:
         if isinstance(expr, DataFrame):
             assert expr.filter is None
             assert expr.child_expr is not None
-            assert expr.parent is not None
-            from .utils import _replace_parent_references
-            child_expr = _replace_parent_references(expr.child_expr, expr.parent)
-            expr = Column(bool, child_expr)
+            # TODO: Does _replace_parent_references need to exist any longer?
+            expr = Column(bool, expr.child_expr)
         # Redundant, but above too complex for type processor?
         assert isinstance(expr, Column), 'Internal error - filter must be a bool column!'
-        return DataFrame(self, None, expr)
+        return DataFrame(ast_DataFrame(self), filter=expr)
 
     def __setitem__(self, key: str,
                     expr: Union[DataFrame, Callable[[DataFrame], DataFrame]]) \
@@ -258,12 +258,12 @@ class DataFrame:
         assert isinstance(self.child_expr, ast.Attribute), \
             'Cannot call a DataFrame directly - must be a function name!'
         from .utils import _term_to_ast
-        assert self.parent is not None, 'Internal programming error'
+        assert isinstance(self.child_expr, ast.Attribute)
         child_expr = ast.Call(func=self.child_expr,
-                              args=[_term_to_ast(a, self.parent) for a in inputs],
+                              args=[_term_to_ast(a, self.child_expr.value.dataframe) for a in inputs],
                               keywords=[ast.keyword(arg=k, value=_term_to_ast(v, self))
                                         for k, v in kwargs.items()])
-        return DataFrame(self.parent, child_expr)
+        return DataFrame(expr=child_expr)
 
     def _test_for_extension(self, name: str):
         'If we have the no-extension flag, then bomb out'
@@ -275,16 +275,16 @@ class DataFrame:
         Take the absolute value of ourselves using the python default syntax.
         '''
         self._test_for_extension('abs')
-        child_expr = ast.Call(func=ast.Attribute(value=ast.Name('p', ctx=ast.Load()),
+        child_expr = ast.Call(func=ast.Attribute(value=ast_DataFrame(self),
                                                  attr='abs', ctx=ast.Load()),
                               args=[], keywords=[])
-        return DataFrame(self, child_expr)
+        return DataFrame(expr=child_expr)
 
     def __invert__(self) -> DataFrame:
         ''' Invert, or logical NOT operation. '''
         self._test_for_extension('operator invert')
-        child_expr = ast.UnaryOp(op=ast.Invert(), operand=ast.Name('p', ctx=ast.Load()))
-        return DataFrame(self, child_expr)
+        child_expr = ast.UnaryOp(op=ast.Invert(), operand=ast_DataFrame(self))
+        return DataFrame(child_expr)
 
     def __and__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''
@@ -318,8 +318,8 @@ class DataFrame:
         # so that it can be properly unpacked.
         from .utils import _term_to_ast
         other_ast = _term_to_ast(other, self)
-        operated = ast.BinOp(left=ast.Name(id='p', ctx=ast.Load()), op=operator, right=other_ast)
-        return DataFrame(self, operated)
+        operated = ast.BinOp(left=ast_DataFrame(self), op=operator, right=other_ast)
+        return DataFrame(operated)
 
     def __lt__(self, other) -> Column:
         ''' x < y '''

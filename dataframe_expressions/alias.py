@@ -1,6 +1,7 @@
 from __future__ import annotations
 import ast
-from typing import Callable, List, Optional
+from dataframe_expressions.asts import ast_DataFrame
+from typing import Callable, List, Optional, cast
 from contextlib import contextmanager
 
 from .DataFrame import DataFrame
@@ -96,16 +97,21 @@ def _matches_pattern_str(df: DataFrame, a: str) -> bool:
     # Simple cases first
     if a is None or len(a) == 0:
         return True
+
+    # If we are at a "." then we just need the parent
+    # to be another dataframe for the attribute.
     if a == '.':
-        return df.parent is None
-    if df.parent is None:
-        return False
+        return df.child_expr is None
 
     # We don't do total expression replacement, sadly
     if not isinstance(df.child_expr, ast.Attribute):
         return False
 
-    # Ok - so we need to split and go down a level
+    # Next, make sure this is an attribute down a level
+    if not isinstance(df.child_expr.value, ast_DataFrame):
+        return False
+
+    # Next, go down a level.
     parts = a.split('.')
     name = parts[-1]
     if name != df.child_expr.attr:
@@ -114,7 +120,8 @@ def _matches_pattern_str(df: DataFrame, a: str) -> bool:
     a_minus = '.'.join(parts[:-1])
     if len(parts) == 2 and parts[0] == '':
         a_minus = '.'
-    return _matches_pattern_str(df.parent, a_minus)
+    df_parent = cast(ast_DataFrame, df.child_expr.value)
+    return _matches_pattern_str(df_parent.dataframe, a_minus)
 
 
 def _matches_pattern(df: DataFrame, a: _alias_info) -> bool:

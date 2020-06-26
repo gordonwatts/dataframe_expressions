@@ -4,7 +4,7 @@ import ast
 from typing import Dict, Optional, Union, Tuple
 
 from dataframe_expressions import Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame
-from .utils import CloningNodeTransformer
+from .utils_ast import CloningNodeTransformer
 
 
 class ast_Filter (ast.AST):
@@ -12,6 +12,9 @@ class ast_Filter (ast.AST):
     Represents a filter - the previous expression, which should be a
     sequence, needs to be filtered on this
     '''
+
+    _fields = ('expr', 'filter')
+
     def __init__(self, expr: ast.AST, filter: ast.AST):
         '''
         Create a filter expression.
@@ -23,8 +26,6 @@ class ast_Filter (ast.AST):
         '''
         self.expr = expr
         self.filter = filter
-        self._fields = ('expr', 'filter')
-        pass
 
 
 class render_context:
@@ -65,24 +66,15 @@ class render_context:
 
 class _parent_subs(CloningNodeTransformer):
     @classmethod
-    def transform(cls, a: ast.AST, parent: Optional[ast.AST],
+    def transform(cls, a: ast.AST,
                   context: render_context) -> ast.AST:
-        v = _parent_subs(parent, context)
+        v = _parent_subs(context)
         return v.visit(a)
 
-    def __init__(self, parent: Optional[ast.AST],
+    def __init__(self,
                  context: render_context):
         ast.NodeTransformer.__init__(self)
-        self._parent = parent
         self._context = context
-
-    def visit_Name(self, a: ast.Name):
-        'If this name is p, then we need to replace with parent'
-        if a.id == 'p':
-            assert self._parent is not None, "Internal programming error"
-            return self._parent
-        else:
-            return a
 
     def visit_ast_Column(self, a: ast_Column):
         'We have a column embedded here. Sort it out'
@@ -102,7 +94,7 @@ def _get_parent_expression(f: Union[Column, DataFrame],
     in the below code, integrated
     '''
     if isinstance(f, Column):
-        child_filter = _parent_subs.transform(f.child_expr, None, context)
+        child_filter = _parent_subs.transform(f.child_expr, context)
         return child_filter
     else:
         return render(f, context)[0]
@@ -148,20 +140,17 @@ def render(d: Union[DataFrame, Column], in_context: Optional[render_context] = N
     '''
     context = render_context() if in_context is None else in_context
 
+    # Simple out
+    if isinstance(d, DataFrame) and d.child_expr is None:
+        return context._lookup_dataframe(d), context
+
     # If this is a column, then it is a comparison expression.
     if isinstance(d, Column):
         return _render_filter(d, context), context
 
-    # If we are at the top of the chain, then our return is easy.
-    if d.parent is None:
-        return context._lookup_dataframe(d), context
-
-    # get the parent info
-    p_expr, _ = render(d.parent, context)
-
     # now we need to tack on our info.
-    expr = p_expr if d.child_expr is None \
-        else _parent_subs.transform(d.child_expr, p_expr, context)
+    assert d.child_expr is not None
+    expr = _parent_subs.transform(d.child_expr, context)
     if d.filter is not None:
         filter_expr = _render_filter(d.filter, context)
         expr = ast_Filter(expr, filter_expr)

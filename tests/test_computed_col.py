@@ -1,9 +1,10 @@
 import ast
-from dataframe_expressions.asts import ast_Callable
+from typing import cast
 
 import pytest
 
 from dataframe_expressions import DataFrame, user_func
+from dataframe_expressions.asts import ast_Callable, ast_DataFrame
 
 from .utils_for_testing import reset_var_counter  # NOQA
 
@@ -14,7 +15,7 @@ def test_create_col_with_text():
     d1 = df.jets.ptgev
 
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1000))"
 
 
 def test_create_col_twice():
@@ -26,7 +27,7 @@ def test_create_col_twice():
     d1 = df.jets.ptgev
 
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1001))"
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1001))"
 
 
 def test_create_access_col_twice():
@@ -42,13 +43,16 @@ def test_create_col_with_text_filtered():
     d1 = df.jets[df.jets.eta < 2.4].ptgev
 
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
-    assert d1.parent is not None
-    assert isinstance(d1.parent, DataFrame)
-    assert d1.parent.parent is not None
-    assert isinstance(d1.parent.parent, DataFrame)
-    p_df = d1.parent.parent
-    assert p_df.child_expr is None
+    assert isinstance(d1.child_expr, ast.BinOp)
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1000))"
+    assert isinstance(d1.child_expr.left, ast_DataFrame)
+    d1_parent = cast(ast_DataFrame, d1.child_expr.left).dataframe
+    assert d1_parent.child_expr is not None
+    assert ast.dump(d1_parent.child_expr) == "Attribute(value=ast_DataFrame(), attr='pt', ctx=Load())"
+    assert isinstance(d1_parent.child_expr, ast.Attribute)
+    assert isinstance(d1_parent.child_expr.value, ast_DataFrame)
+    p_df = cast(ast_DataFrame, d1_parent.child_expr.value).dataframe
+    assert isinstance(p_df.child_expr, ast_DataFrame)
     assert p_df.filter is not None
     assert ast.dump(p_df.filter.child_expr) == "Compare(left=ast_DataFrame(), ops=[Lt()], comparators=[Num(n=2.4)])"
 
@@ -59,10 +63,11 @@ def test_create_col_yuck_doesnot_track():
     d1 = df.jets[df.jets.eta < 2.4].ptgev
 
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Attribute(value=Name(id='p', ctx=Load()), attr='met', ctx=Load())"
-    assert d1.parent is not None
-    assert isinstance(d1.parent, DataFrame)
-    p_df = d1.parent
+    assert ast.dump(d1.child_expr) == "Attribute(value=ast_DataFrame(), attr='met', ctx=Load())"
+    assert isinstance(d1.child_expr, ast.Attribute)
+    d1_parent = d1.child_expr.value
+    assert isinstance(d1_parent, ast_DataFrame)
+    p_df = cast(ast_DataFrame, d1_parent).dataframe
     assert p_df is df
 
 
@@ -71,7 +76,7 @@ def test_create_col_no_confusion():
     df.jets['ptgev'] = df.jets.pt / 1000.0
     d1 = df.jets.pt.ptgev
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Attribute(value=Name(id='p', ctx=Load()), attr='ptgev', ctx=Load())"
+    assert ast.dump(d1.child_expr) == "Attribute(value=ast_DataFrame(), attr='ptgev', ctx=Load())"
 
 
 def test_create_col_with_filter_access():
@@ -81,7 +86,7 @@ def test_create_col_with_filter_access():
     d1 = good_jets.ptgev
 
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1000))"
 
 
 def test_create_col_with_filter_early_access():
@@ -91,7 +96,7 @@ def test_create_col_with_filter_early_access():
     d1 = df.jets.ptgev
 
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == "Attribute(value=Name(id='p', ctx=Load()), attr='ptgev', ctx=Load())"
+    assert ast.dump(d1.child_expr) == "Attribute(value=ast_DataFrame(), attr='ptgev', ctx=Load())"
 
 
 def test_create_col_with_lambda():
@@ -102,15 +107,12 @@ def test_create_col_with_lambda():
     assert d1.child_expr is not None
     assert isinstance(d1.child_expr, ast.Call)
     assert len(d1.child_expr.args) == 1
-    assert isinstance(d1.child_expr.args[0], ast.Name)
-    p = d1.parent
-    assert isinstance(p, DataFrame)
-    assert p.parent is not None
-    assert isinstance(p.parent, DataFrame)
-    assert p.parent is df
+    assert isinstance(d1.child_expr.args[0], ast_DataFrame)
+    p = cast(ast_DataFrame, d1.child_expr.args[0]).dataframe
+    assert isinstance(p.child_expr, ast.Attribute)
 
     assert isinstance(d1.child_expr.func, ast_Callable)
-    assert d1.child_expr.func.dataframe is p
+    assert cast(ast_Callable, d1.child_expr.func).dataframe is p
 
 
 def test_col_twice_nested():
@@ -124,8 +126,11 @@ def test_col_twice_nested():
     assert "Call(func=ast_Callable(name='lambda" in ast.dump(d1.child_expr)
     assert d1.filter is None
 
-    assert d1.parent is not None
-    assert d1.parent.filter is not None
+    assert isinstance(d1.child_expr, ast.Call)
+    assert len(d1.child_expr.args) == 1
+    assert isinstance(d1.child_expr.args[0], ast_DataFrame)
+    p = cast(ast_DataFrame, d1.child_expr.args[0]).dataframe
+    assert p.filter is not None
 
 
 def test_nested_col_access():
@@ -163,4 +168,9 @@ def test_nested_col_access():
     assert isinstance(d1.child_expr, ast.Call)
     assert isinstance(d1.child_expr.func, ast_Callable)
 
-    assert d1.child_expr.func.dataframe is d1.parent
+    assert isinstance(d1.child_expr, ast.Call)
+    assert len(d1.child_expr.args) == 1
+    assert isinstance(d1.child_expr.args[0], ast_DataFrame)
+    p = cast(ast_DataFrame, d1.child_expr.args[0]).dataframe
+
+    assert cast(ast_Callable, d1.child_expr.func).dataframe is p
