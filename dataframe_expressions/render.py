@@ -87,7 +87,7 @@ class _parent_subs(CloningNodeTransformer):
 
 
 def _render_filter(f: Column, context: render_context) \
-         -> ast.AST:
+        -> ast.AST:
     'Render a filter/Mask as a result'
     v = _parent_subs.transform(f.child_expr, context)
     assert v is not None
@@ -161,4 +161,4 @@ def render_callable(callable: ast_Callable, context: render_context, *args) \
         return _render_filter(d_result, new_context), new_context
     else:
         from .utils import _term_to_ast
-        return _term_to_ast(d_result,  DataFrame()), new_context
+        return _term_to_ast(d_result, DataFrame()), new_context
