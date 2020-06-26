@@ -155,7 +155,7 @@ class op_vec(op_base):
 
 
 class vec(DataFrame):
-    def __init__(self, df: DataFrame, compound: Optional[op_base] = None) -> None:
+    def __init__(self, df: Optional[DataFrame], compound: Optional[op_base] = None) -> None:
         DataFrame.__init__(self, expr=ast_DataFrame(df))
         self._ref: op_base = compound if compound is not None else op_vec(self)
 
@@ -168,9 +168,7 @@ class vec(DataFrame):
 
     def __add__(self, other: vec) -> vec:
         'Do the addition'
-        assert isinstance(other, vec)
-        assert self.parent is not None
-        return vec(self.parent, op_bin(self._ref, other._ref))
+        return vec(None, op_bin(self._ref, other._ref))
 
 
 def test_xy():

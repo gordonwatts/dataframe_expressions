@@ -291,7 +291,7 @@ class DataFrame:
         self._test_for_extension('operator and')
         from .utils import _term_to_ast
         return Column(type(bool), ast.BoolOp(op=ast.And(),
-                      values=[_term_to_ast(self, self.parent), _term_to_ast(other, self)]))
+                      values=[_term_to_ast(self, None), _term_to_ast(other, None)]))
 
     def __or__(self, other) -> Column:
         ''' Bitwise and becomes a logical and. '''

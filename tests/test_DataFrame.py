@@ -41,9 +41,6 @@ def test_dataframe_attribute():
     d = DataFrame()
     ref = d.x
     assert isinstance(ref, DataFrame)
-    assert hasattr(ref, 'parent')
-    assert ref.parent == d
-    assert hasattr(ref, 'child_expr')
     assert isinstance(ref.child_expr, ast.AST)
     assert ast.dump(ref.child_expr) == "Attribute(value=ast_DataFrame(), attr='x', ctx=Load())"
 
@@ -450,6 +447,12 @@ def test_deep_copy_1():
     df2 = copy.deepcopy(df1)
 
     assert df2 is not df1
+
     assert df2.child_expr is not None
     assert df2.filter is None
-    assert df2.parent is not df
+
+    assert isinstance(df2.child_expr, ast.Attribute)
+    assert isinstance(df2.child_expr.value, ast_DataFrame)
+    df2_parent = cast(ast_DataFrame, df2.child_expr.value)
+
+    assert df2_parent is not df
