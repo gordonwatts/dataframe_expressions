@@ -97,20 +97,3 @@ def exclusive_class(o_class: T) -> T:
 
     o_class.__init__ = __init__  # Set the class' __init__ to the new one
     return o_class
-
-
-def _replace_parent_references(a: ast.AST, sub: DataFrame) -> ast.AST:
-    '''
-    Find Name(id='p') and replace them with sub in a.
-    '''
-    class replace_p(ast.NodeTransformer):
-        def __init__(self, sub: DataFrame):
-            ast.NodeTransformer.__init__(self)
-            self._sub = ast_DataFrame(sub)
-
-        def visit_Name(self, a: ast.Name):
-            if a.id == 'p':
-                return self._sub
-            return self.generic_visit(a)
-
-    return replace_p(sub).visit(a)

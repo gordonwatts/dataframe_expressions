@@ -2,6 +2,7 @@
     "python.pythonPath": ".venv\\Scripts\\python.exe",
     "python.linting.flake8Enabled": true,
     "cSpell.words": [
+        "Codecov",
         "Dataframe",
         "Dataset",
         "NOQA",
@@ -22,7 +23,9 @@
         "ptgev",
         "pytest",
         "reco",
+        "setuptools",
         "subexpr",
-        "ufunc"
+        "ufunc",
+        "unittests"
     ]
 }

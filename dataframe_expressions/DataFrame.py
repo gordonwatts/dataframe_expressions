@@ -217,7 +217,6 @@ class DataFrame:
         if isinstance(expr, DataFrame):
             assert expr.filter is None
             assert expr.child_expr is not None
-            # TODO: Does _replace_parent_references need to exist any longer?
             expr = Column(bool, expr.child_expr)
         # Redundant, but above too complex for type processor?
         assert isinstance(expr, Column), 'Internal error - filter must be a bool column!'

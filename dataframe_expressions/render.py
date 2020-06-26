@@ -86,37 +86,12 @@ class _parent_subs(CloningNodeTransformer):
         return expr
 
 
-def _get_parent_expression(f: Union[Column, DataFrame],
-                           context: render_context) \
-        -> ast.AST:
-    '''
-    Fetch the parent expression. This doesn't feel like we need this somehow. That it should be
-    in the below code, integrated
-    '''
-    if isinstance(f, Column):
-        child_filter = _parent_subs.transform(f.child_expr, context)
-        return child_filter
-    else:
-        return render(f, context)[0]
-
-
 def _render_filter(f: Column, context: render_context) \
          -> ast.AST:
     'Render a filter/Mask as a result'
-    v = _get_parent_expression(f, context)
+    v = _parent_subs.transform(f.child_expr, context)
     assert v is not None
     return v
-
-
-def _build_optional_and(a1: Optional[ast.AST], a2: Optional[ast.AST]) -> Optional[ast.AST]:
-    'Build an and if necessary'
-    if a1 is None and a2 is None:
-        return None
-    if a1 is None:
-        return a2
-    if a2 is None:
-        return a1
-    return ast.BoolOp(op=ast.And(), values=[a1, a2])
 
 
 def render(d: Union[DataFrame, Column], in_context: Optional[render_context] = None) \
