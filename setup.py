@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 extras_require = {'test': ['pytest', 'pytest-asyncio', 'pytest-cov',
-                           'flake8', 'coverage', 'twine', 'numpy']}
+                           'flake8', 'coverage', 'twine', 'wheel', 'numpy']}
 extras_require['complete'] = sorted(set(sum(extras_require.values(), [])))
 
 setup(name="dataframe_expressions",

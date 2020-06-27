@@ -7,6 +7,7 @@
         "Dataset",
         "NOQA",
         "asts",
+        "asyncio",
         "calced",
         "callme",
         "dfattr",
