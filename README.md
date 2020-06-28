@@ -224,8 +224,6 @@ expression = render(df1)
 
 If there are filters, there is another special ast object you need to be able to process, `ast_Filter`. For example, `df[df.met > 50].jets.pt`, will have `expression` starting with two `ast.Attribute` nodes, followed by a `ast_Filter` node. There are two members there, one is `expr` and in this case it will contain the `df`, or the `ast_Dataframe` that points to `df`. The second member is `filter` which points to an expression that is the filter. It should evaluate to true or false. As long as there is repeated phrase, like `df` in `df[df.met > 50].jets.pt` or `df.jets` in `df.jets[df.jets.count() == 2]`, they will point to the same `ast.AST` object - so you can use that in walking the tree to recognize the same expression(s).
 
-TODO: This example is a bit sloppy, as we have the usual problem of how to parse at collection vs leaf level. When we have something working, come back and make this more clean.
-
 ## Technology Choices
 
 Not sure these are the right thing, but...
@@ -252,7 +250,7 @@ This isn't an exhaustive list. Just a list of some choices I had to make to get 
 
 - Using BitAnd and BitOr for and and or - but should I use the logical and and or here to make it clear in the AST what we are talking about?
 
-- What does `d1[d[d.x > 0].jets.pt > 20].pt` mean? Is this where we are hitting the limit of things? I'd say it means nothing and should create an error. Something like `d1[(d[d.x > 0].jets.pt > 20).count()].pt` works, however. TODO - make this sort of expression an error (the first of these two!) Actually even the above - what does that mean? Isn't the right way to do that is `d1[(d[d.x > 0].jets[d.jets.pt>0].count())]` or similar? Ugh. Ok - the thing to do for now is be strict, and we can add things which make life easier later.
+- What does `d1[d[d.x > 0].jets.pt > 20].pt` mean? Is this where we are hitting the limit of things? I'd say it means nothing and should create an error. Something like `d1[(d[d.x > 0].jets.pt > 20).count()].pt` works, however. Actually even the above - what does that mean? Isn't the right way to do that is `d1[(d[d.x > 0].jets[d.jets.pt>0].count())]` or similar? Ugh. Ok - the thing to do for now is be strict, and we can add things which make life easier later.
 
 - Sometimes functions are defined in places they make no sense. For example, the `abs` (or any `numpy` function) is defined always, even if your `DataFrame` represents a collection of jets. A reason to have `columns` and `collections` as different objects to help the user, and help editors guess possibilities.
 

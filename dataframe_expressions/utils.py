@@ -6,9 +6,6 @@ from dataframe_expressions import (
     Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame, ast_FunctionPlaceholder)
 
 
-# TODO: Fix the circular include triggered by _term_to_ast
-
-
 class DataFrameTypeError(Exception):
     '''Thrown when we don't understand the type in an expression'''
     def __init__(self, message):

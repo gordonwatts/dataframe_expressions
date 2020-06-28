@@ -43,7 +43,8 @@ def test_collection_subtract():
     df1 = mlo1-mlo2
 
     expr, _ = render(df1)
-    assert ast.dump(expr) == "BinOp(left=Attribute(value=ast_DataFrame(), attr='m1', ctx=Load()), op=Sub(), right=Attribute(value=ast_DataFrame(), attr='m2', ctx=Load()))"
+    assert ast.dump(expr) == "BinOp(left=Attribute(value=ast_DataFrame(), attr='m1', " \
+        "ctx=Load()), op=Sub(), right=Attribute(value=ast_DataFrame(), attr='m2', ctx=Load()))"
 
 
 def test_collection_object_other():
@@ -74,11 +75,6 @@ class multi_leaf_object_excl(DataFrame):
     @property
     def x1(self) -> DataFrame:
         return self.__p.x_new_1
-
-# TODO: As in README test out a class that defines a seeminly recursive definition of
-#       properties
-# TODO: See if we can't define this right above without the __p
-# TODO: Fix up the README
 
 
 @exclusive_class
@@ -204,6 +200,8 @@ def test_add_xy():
 
     x_component = x_component2.left
     assert isinstance(x_component, ast.BinOp)
-    assert ast.dump(x_component) == "BinOp(left=Attribute(value=Attribute(value=ast_DataFrame(), attr='x', ctx=Load()), attr='x', ctx=Load()), " \
+    assert ast.dump(x_component) == "BinOp(left=Attribute(value=Attribute(value=ast_DataFrame()," \
+        " attr='x', ctx=Load()), attr='x', ctx=Load()), " \
         "op=Add(), " \
-        "right=Attribute(value=Attribute(value=ast_DataFrame(), attr='y', ctx=Load()), attr='x', ctx=Load()))"
+        "right=Attribute(value=Attribute(value=ast_DataFrame(), attr='y', ctx=Load()), " \
+        "attr='x', ctx=Load()))"

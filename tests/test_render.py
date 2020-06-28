@@ -499,10 +499,13 @@ def test_render_callable_twice_for_same_results():
     assert len(c_context1._resolved) == len(c_context2._resolved)
 
 # def test_subexpr_2filter_same():
-# TODO: See the line in the readme - it isn't clear what this means - to take the count of a column.
-#       The semantics are clear, but it is also obvious this is a, from a code point of view, a different
-#       way of thinking about things. So we need to be careful here to make sure that we aren't accidentally
-#       adding some new meaning that will get confusing. So think this through before deciding this test
+# See the line in the readme - it isn't clear what this means - to take the count of a column.
+#       The semantics are clear, but it is also obvious this is a, from a code point of view, a
+#       different
+#       way of thinking about things. So we need to be careful here to make sure that we aren't
+#       accidentally
+#       adding some new meaning that will get confusing. So think this through before deciding
+#       this test
 #       makes sense!
 #     d = DataFrame()
 #     d1 = d[d.x > 0].jets

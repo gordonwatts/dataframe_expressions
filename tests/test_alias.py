@@ -5,8 +5,6 @@ from dataframe_expressions.alias import lookup_alias
 
 from .utils_for_testing import reset_var_counter  # NOQA
 
-# TODO: Multiple definitions are not tested or protected against
-
 
 def test_define_alias_no_error():
     define_alias(".jets", "pts", lambda j: j.pt / 1000.0)
@@ -155,7 +153,8 @@ def test_resolve_hidden_name():
 #     assert isinstance(d1, DataFrame)
 #     assert d1.filter is None
 #     assert d1.child_expr is not None
-#     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
+#     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(),
+#           right=Num(n=1000))"
 #     assert isinstance(d1.parent.child_expr, ast.Attribute)
 
 
@@ -166,7 +165,8 @@ def test_resolve_hidden_name():
 #     assert isinstance(d1, DataFrame)
 #     assert d1.filter is None
 #     assert d1.child_expr is not None
-#     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
+#     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(),
+#           right=Num(n=1000))"
 #     assert isinstance(d1.parent.child_expr, ast.Attribute)
 
 
@@ -177,7 +177,8 @@ def test_resolve_hidden_name():
 #     assert isinstance(d1, DataFrame)
 #     assert d1.filter is None
 #     assert d1.child_expr is not None
-#     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(), right=Num(n=1000))"
+#     assert ast.dump(d1.child_expr) == "BinOp(left=Name(id='p', ctx=Load()), op=Div(),
+#           right=Num(n=1000))"
 #     assert isinstance(d1.parent.child_expr, ast.Attribute)
 
 
