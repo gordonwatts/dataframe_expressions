@@ -1,8 +1,10 @@
 import ast
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
+from dataframe_expressions.DataFrame import DataFrame
+from dataframe_expressions.render import render
 from dataframe_expressions import (
-    DataFrame, ast_Callable, render, render_context,
+    ast_Callable, render_context,
     render_callable, user_func)
 
 
@@ -50,7 +52,8 @@ def test_different_callables_look_different():
     mc_part = df.TruthParticles('TruthParticles')
     eles = df.Electrons('Electrons')
 
-    # This gives us a list of events, and in each event, good electrons, and then for each good electron, all good MC electrons that are near by
+    # This gives us a list of events, and in each event, good electrons, and then for each good
+    # electron, all good MC electrons that are near by
     eles['near_mcs'] = lambda reco_e: mc_part
     eles['hasMC'] = lambda e: e.near_mcs.Count() > 0
 
@@ -78,7 +81,8 @@ def test_second_dr_returns_filtered():
     eles = df.Electrons('Electrons')
 
     def dr(e, mc):
-        'Make calculating DR easier as I have a hard-to-use DR calculation function on the back end'
+        '''Make calculating DR easier as I have a hard-to-use DR calculation function on
+        the back end'''
         return DeltaR(e.eta())
 
     def very_near2(mcs, e):
@@ -107,7 +111,8 @@ def test_second_dr_returns_filtered():
             assert len(a.args) == 1
             # arg = self.visit(a.args[0])
 
-            expr, new_context = render_callable(a.func, self._context, a.func.dataframe)  # type: ignore
+            expr, new_context = render_callable(cast(ast_Callable, a.func),
+                                                self._context, a.func.dataframe)  # type: ignore
             old_context = self._context
             try:
                 self._context = new_context

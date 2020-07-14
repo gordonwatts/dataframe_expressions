@@ -28,5 +28,9 @@
         "subexpr",
         "ufunc",
         "unittests"
-    ]
+    ],
+    "python.testing.pytestArgs": [
+        "--no-cov"
+    ],
+    "python.analysis.typeCheckingMode": "basic"
 }

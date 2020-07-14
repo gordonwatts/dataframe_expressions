@@ -2,8 +2,9 @@ import ast
 from typing import Callable, Union, Optional, TypeVar
 import inspect
 
+from dataframe_expressions.DataFrame import DataFrame
 from dataframe_expressions import (
-    Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame, ast_FunctionPlaceholder)
+    Column, ast_Callable, ast_Column, ast_DataFrame, ast_FunctionPlaceholder)
 
 
 class DataFrameTypeError(Exception):
