@@ -164,7 +164,7 @@ def render_callable(callable: ast_Callable, context: render_context, *args) \
         log_str = '\n'.join(dumps(d_result))
     else:
         log_str = str(d_result)
-    logging.getLogger(__name__).debug(f'render_context: {log_str}')
+    logging.getLogger(__name__).debug(f'render_callable: {log_str}')
 
     # Render it
     if isinstance(d_result, DataFrame):
