@@ -4,7 +4,9 @@ from typing import Any, Callable, Optional
 
 import pytest
 
-from dataframe_expressions import DataFrame, ast_DataFrame, exclusive_class, render
+from dataframe_expressions.DataFrame import DataFrame
+from dataframe_expressions.render import render
+from dataframe_expressions import ast_DataFrame, exclusive_class
 
 from .utils_for_testing import reset_var_counter  # NOQA
 

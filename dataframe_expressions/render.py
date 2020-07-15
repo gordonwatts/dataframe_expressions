@@ -1,9 +1,11 @@
 from __future__ import annotations
-# Methods to render the DataFrame chain as a set of expressions.
 import ast
+from dataframe_expressions.dump_dataframe import dumps
 from typing import Dict, Optional, Union, Tuple
+import logging
 
-from dataframe_expressions import Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame
+from dataframe_expressions.DataFrame import DataFrame
+from dataframe_expressions import Column, ast_Callable, ast_Column, ast_DataFrame
 from .utils_ast import CloningNodeTransformer
 
 
@@ -113,6 +115,10 @@ def render(d: Union[DataFrame, Column], in_context: Optional[render_context] = N
         in this case. That means the object hash will be the same. This can be used as a
         poor-person's way of doing common sub-expression elimination.
     '''
+    if in_context is None:
+        s = '\n'.join(dumps(d))
+        logging.getLogger(__name__).debug(f'Rendering: {s}')
+
     context = render_context() if in_context is None else in_context
 
     # Simple out
@@ -153,6 +159,12 @@ def render_callable(callable: ast_Callable, context: render_context, *args) \
     # Invoke the call
     d_result = callable.callable(*args)
     new_context = render_context(context)
+
+    if isinstance(d_result, (DataFrame, Column)):
+        log_str = '\n'.join(dumps(d_result))
+    else:
+        log_str = str(d_result)
+    logging.getLogger(__name__).debug(f'render_callable: {log_str}')
 
     # Render it
     if isinstance(d_result, DataFrame):
