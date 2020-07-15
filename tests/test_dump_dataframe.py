@@ -1,7 +1,28 @@
-from dataframe_expressions.asts import ast_DataFrame
+import ast
+from _pytest.python_api import raises
+
 import pytest
 from dataframe_expressions import dumps, user_func
+from dataframe_expressions.asts import ast_DataFrame
 from dataframe_expressions.DataFrame import DataFrame
+
+
+def test_new_df_repeat():
+    from dataframe_expressions.dump_dataframe import var_context
+    v = var_context()
+    df = DataFrame()
+    name_1 = v.new_df(df)
+    name_2 = v.new_df(df)
+
+    assert name_1 == name_2
+
+
+def test_lookup_fails():
+    from dataframe_expressions.dump_dataframe import var_context
+    v = var_context()
+    df = DataFrame()
+    with pytest.raises(Exception):
+        v.lookup(df)
 
 
 def test_root():
@@ -144,6 +165,15 @@ def test_python_other_function():
     assert '\n'.join(r) == '''df_1 = DataFrame()
 df_2 = df_1.x
 df_3 = doit(df_2)'''
+
+
+def test_bogus_function_call():
+    df1 = DataFrame(expr=ast.Call(func=ast.BinOp()))
+
+    with pytest.raises(Exception) as e:
+        dumps(df1)
+
+    assert "BinOp" in str(e.value)
 
 
 def test_nested_dataframe():

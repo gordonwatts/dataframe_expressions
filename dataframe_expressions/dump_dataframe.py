@@ -214,7 +214,8 @@ def dumps(df: Union[DataFrame, Column],
         if df.child_expr is None and df.filter is None:
             if not context.is_defined(df):
                 return [f'{context.new_df(df)} = DataFrame()']
-            return []
+            # We will never get here because we do not enter this
+            # method if we've already seen this dataframe.
         assert df.child_expr is not None
 
         filter = parse_column(df.filter, context)
