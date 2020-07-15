@@ -194,7 +194,15 @@ def dumps(df: Union[DataFrame, Column],
         df          `DataFrame` to be dumped
 
     Returns
+
         str         Multi-line string result.
+
+    Notes:
+
+        - Any function object that participates in the `DataFrame` rendering (e.g. a
+          lambda or the like) can't be looked inside. The dumper will do its best to return
+          text that describes what the function is so that one may find it in ones source
+          code.
     '''
     if context is None:
         context = var_context()

@@ -224,6 +224,19 @@ expression = render(df1)
 
 If there are filters, there is another special ast object you need to be able to process, `ast_Filter`. For example, `df[df.met > 50].jets.pt`, will have `expression` starting with two `ast.Attribute` nodes, followed by a `ast_Filter` node. There are two members there, one is `expr` and in this case it will contain the `df`, or the `ast_Dataframe` that points to `df`. The second member is `filter` which points to an expression that is the filter. It should evaluate to true or false. As long as there is repeated phrase, like `df` in `df[df.met > 50].jets.pt` or `df.jets` in `df.jets[df.jets.count() == 2]`, they will point to the same `ast.AST` object - so you can use that in walking the tree to recognize the same expression(s).
 
+## Helpers
+
+The `dumps` function will dump a dataframe to a string. For the most part, the string will be correct python (lambda functions and other function routines are the only exception). This is useful for including in error text or in logging in libraries that make use of this library.
+
+The `dataframe_expressions` library makes use of the python `logging` library to dump expressions it is asked to render at the debug level. If you want to turn on just messages from this library the following code will dump debug level messages to stdout:
+
+```python
+import logging
+ch = logging.StreamHandler()
+logging.getLogger('dataframe_expressions').setLevel(logging.DEBUG)
+logging.getLogger('dataframe_expressions').addHandler(ch)
+```
+
 ## Technology Choices
 
 Not sure these are the right thing, but...
