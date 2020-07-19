@@ -1,11 +1,8 @@
 import ast
 from typing import Optional, Tuple, cast
 
-from dataframe_expressions.DataFrame import DataFrame
-from dataframe_expressions.render import render
-from dataframe_expressions import (
-    ast_Callable, render_context,
-    render_callable, user_func)
+from dataframe_expressions import (DataFrame, ast_Callable, render,
+                                   render_callable, render_context, user_func)
 
 
 class find_callable(ast.NodeVisitor):

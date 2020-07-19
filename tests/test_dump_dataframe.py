@@ -1,10 +1,8 @@
 import ast
-from _pytest.python_api import raises
 
 import pytest
-from dataframe_expressions import dumps, user_func
+from dataframe_expressions import dumps, user_func, DataFrame
 from dataframe_expressions.asts import ast_DataFrame
-from dataframe_expressions.DataFrame import DataFrame
 
 
 def test_new_df_repeat():

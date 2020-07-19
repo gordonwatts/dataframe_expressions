@@ -1,10 +1,11 @@
 from __future__ import annotations
-import ast
-from dataframe_expressions.asts import ast_DataFrame
-from typing import Callable, List, Optional, cast
-from contextlib import contextmanager
 
-from .DataFrame import DataFrame
+import ast
+from contextlib import contextmanager
+from typing import Callable, List, Optional, cast
+
+from dataframe_expressions import DataFrame
+from dataframe_expressions.asts import ast_DataFrame
 
 
 def _reset_alias_catalog():
