@@ -18,6 +18,15 @@ def test_create_col_with_text():
     assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1000))"
 
 
+def test_create_col_access_with_text():
+    df = DataFrame()
+    df.jets['ptgev'] = df.jets.pt / 1000
+    d1 = df.jets['ptgev']
+
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1000))"
+
+
 def test_create_col_twice():
     df = DataFrame()
     df.jets['ptgev'] = df.jets.pt / 1000.0

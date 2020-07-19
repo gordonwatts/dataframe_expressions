@@ -154,6 +154,8 @@ jetpt_in_gev = df.jets[df.jets.ptgev > 30].ptgev
 
 The prototype implementation is particularly fragile - but that is due to poor design rather than a technical limitation.
 
+You can also refer to a leaf using a simple syntax. For example, `df.jets["ptgev"]` and `df.jets.ptgev` are the same on the right hand side of an expression. `df.xxx` and `df["xxx"]` are equivalent in all circumstances.
+
 ### Adding to the data model using objects
 
 Another way to do this is build an object. For example, lets say you want to make it easy to do 3-vector operations. You might write something like this:
