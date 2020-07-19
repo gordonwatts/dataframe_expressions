@@ -4,7 +4,7 @@ from typing import List, Optional, Union, Callable
 
 from dataframe_expressions.asts import ast_Callable, ast_Column, ast_FunctionPlaceholder
 
-from .DataFrame import Column, DataFrame, ast_DataFrame
+from .data_frame import Column, DataFrame, ast_DataFrame
 
 ItemType = Union[ast.AST, DataFrame, Column]
 

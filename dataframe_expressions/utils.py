@@ -1,10 +1,10 @@
 import ast
-from typing import Callable, Union, Optional, TypeVar
 import inspect
+from typing import Callable, Optional, TypeVar, Union
 
-from dataframe_expressions.DataFrame import DataFrame
 from dataframe_expressions import (
-    Column, ast_Callable, ast_Column, ast_DataFrame, ast_FunctionPlaceholder)
+    Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame,
+    ast_FunctionPlaceholder)
 
 
 class DataFrameTypeError(Exception):

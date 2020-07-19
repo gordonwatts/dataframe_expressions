@@ -10,7 +10,7 @@ class ast_DataFrame(ast.AST):
 
     def __init__(self, dataframe=None):
         ast.AST.__init__(self)
-        from .DataFrame import DataFrame
+        from dataframe_expressions import DataFrame
         assert dataframe is None or isinstance(dataframe, DataFrame)
         self.dataframe = cast(DataFrame, dataframe)
 
@@ -21,7 +21,7 @@ class ast_Column(ast.AST):
 
     def __init__(self, col=None):
         ast.AST.__init__(self)
-        from .DataFrame import Column
+        from dataframe_expressions import Column
         assert col is None or isinstance(col, Column)
         self.column = cast(Column, col)
 

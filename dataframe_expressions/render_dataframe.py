@@ -4,8 +4,7 @@ from dataframe_expressions.dump_dataframe import dumps
 from typing import Dict, Optional, Union, Tuple
 import logging
 
-from dataframe_expressions.DataFrame import DataFrame
-from dataframe_expressions import Column, ast_Callable, ast_Column, ast_DataFrame
+from dataframe_expressions import Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame
 from .utils_ast import CloningNodeTransformer
 
 
