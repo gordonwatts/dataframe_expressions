@@ -264,6 +264,30 @@ df_3 = 1.0 / df_2
 df_4 = df_3.log10()'''
 
 
+def test_np_func_where():
+    import numpy as np
+    d = DataFrame()
+    f1 = np.where(d.x > 0, d.x, d.y)
+
+    from dataframe_expressions import dumps
+    assert '\n'.join(dumps(cast(DataFrame, f1))) == '''df_1 = DataFrame()
+df_2 = df_1.x
+df_3 = df_2 > 0
+df_4 = df_1.y
+df_5 = np_where(df_3,df_2,df_4)'''
+
+
+def test_np_func_histogram():
+    import numpy as np
+    d = DataFrame()
+    f1 = np.histogram(d.x, bins=50, range=(-0.5, 10.0))
+
+    from dataframe_expressions import dumps
+    assert '\n'.join(dumps(cast(DataFrame, f1))) == '''df_1 = DataFrame()
+df_2 = df_1.x
+df_3 = np_histogram(df_2,bins=50,range=(-0.5,10.0))'''
+
+
 def test_fluent_function_no_args():
     d = DataFrame()
     d1 = d.count()

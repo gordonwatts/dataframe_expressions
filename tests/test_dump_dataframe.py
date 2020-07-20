@@ -77,15 +77,23 @@ df_3 = df_1.y
 df_4 = df_2 {operator_text} df_3'''
 
 
-def test_constant():
+@pytest.mark.parametrize("constant, output", [
+    (1, "1"),
+    (1.5, "1.5"),
+    ("hi", "'hi'"),
+    ((1, 2), "(1,2)"),
+    ((), "()"),
+    ([1, 2], "[1,2]")
+])
+def test_constant(constant, output):
     df = DataFrame()
-    df1 = df.x > 1
+    df1 = df[df > constant]
 
     r = dumps(df1)
 
-    assert '\n'.join(r) == '''df_1 = DataFrame()
-df_2 = df_1.x
-df_3 = df_2 > 1'''
+    assert '\n'.join(r) == f'''df_1 = DataFrame()
+df_2 = df_1 > {output}
+df_3 = df_1[df_2]'''
 
 
 def test_string():
@@ -163,6 +171,30 @@ def test_python_other_function():
     assert '\n'.join(r) == '''df_1 = DataFrame()
 df_2 = df_1.x
 df_3 = doit(df_2)'''
+
+
+def test_python_np_function():
+    import numpy
+    df = DataFrame()
+    df1 = numpy.histogram(df.x)
+
+    r = dumps(df1)  # type: ignore
+
+    assert '\n'.join(r) == '''df_1 = DataFrame()
+df_2 = df_1.x
+df_3 = np_histogram(df_2)'''
+
+
+def test_python_kw_args():
+    import numpy
+    df = DataFrame()
+    df1 = numpy.histogram(df.x, bins=50)
+
+    r = dumps(df1)  # type: ignore
+
+    assert '\n'.join(r) == '''df_1 = DataFrame()
+df_2 = df_1.x
+df_3 = np_histogram(df_2,bins=50)'''
 
 
 def test_bogus_function_call():

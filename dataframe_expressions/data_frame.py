@@ -250,6 +250,30 @@ class DataFrame:
         assert visitor is not None, f'Unable to call function "{ufunc.__name__}" on dataframe.'
         return visitor(*inputs[1:], **kwargs)
 
+    def __array_function__(self, func, types, args, kwargs):
+        '''Generate a function call to a numpy array function (`where`, `histogram`, etc).
+
+        Args:
+            func (Callable): Built in numpy function that was called
+            types (Tuple): List of the types of arguments
+            args (Tuple): Each argument passed to the function
+            kwargs (Dict): All keyword arguments passed to the function
+
+        Returns:
+            DataFrame: DataFrame representing the call
+
+        Notes:
+            Protocol is based off
+            (NEP-18)[https://numpy.org/neps/nep-0018-array-function-protocol.html]
+        '''
+        from .utils import _term_to_ast
+        function = ast.Name(id=f'np_{func.__name__}', ctx=ast.Load())
+        child_expr = ast.Call(func=function,
+                              args=[_term_to_ast(a, self) for a in args],
+                              keywords=[ast.keyword(arg=k, value=_term_to_ast(v, self))
+                                        for k, v in kwargs.items()])
+        return DataFrame(child_expr)
+
     def __call__(self, *inputs, **kwargs) -> DataFrame:
         '''
         Someone is trying to turn an attribute into a function. That is fine, but it takes some
