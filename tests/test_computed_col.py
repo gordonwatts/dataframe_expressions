@@ -126,6 +126,13 @@ def test_create_col_with_lambda():
     assert cast(ast_Callable, d1.child_expr.func).dataframe is p
 
 
+def test_create_col_with_lambda_twice():
+    df = DataFrame()
+    df.jets['ptgev'] = lambda j: j.pt / 1000
+    df.jets['ptgev'] = lambda j: j.pt / 1001
+    _ = df.jets.ptgev
+
+
 def test_col_twice_nested():
     df = DataFrame()
     df.jets['ptgev'] = lambda j: j.pt / 1000.0

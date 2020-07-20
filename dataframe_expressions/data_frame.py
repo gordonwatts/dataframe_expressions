@@ -239,7 +239,7 @@ class DataFrame:
             if not self._sub_df[key].computed_col:
                 raise Exception(f'You may not redefine "{key}".')
             else:
-                logging.getLogger(__name__).warning('')
+                logging.getLogger(__name__).warning(f'Redefinition of DataFrame item "{key}"')
 
         self._sub_df[key] = _sub_link_info(expr, True)
         return self
