@@ -57,7 +57,7 @@ as well as some python function:
 d1 = abs(d.x)
 ```
 
-Internally, this is rendered as `d.x.sin()`.
+Internally, this is rendered as `d.x.sin()`. The `numpy` functions are translated directly into calls like this - it is up to whatever backend you have to actually implement them. For the complete list of `numpy` functions, see the [`numpy` math page](https://numpy.org/doc/stable/reference/routines.math.html).
 
 ## Lambda functions and captured variables
 
