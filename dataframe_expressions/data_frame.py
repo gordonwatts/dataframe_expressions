@@ -195,18 +195,23 @@ class DataFrame:
             self._sub_df[name] = _sub_link_info(result, False)
         return self._sub_df[name].render(self)
 
-    def __getitem__(self, expr: Union[Callable, DataFrame, Column, int]) -> DataFrame:
-        '''A filtering operation of some sort'''
-        assert isinstance(expr, (DataFrame, Column, int)) or callable(expr), \
+    def __getitem__(self, expr: Union[Callable, DataFrame, Column, str, int]) -> DataFrame:
+        '''A filtering operation of some sort or a branch look up or a slice'''
+        assert isinstance(expr, (DataFrame, Column, int, str)) or callable(expr), \
             "Filtering a data frame must be done by a DataFrame expression " \
             f"(type: DataFrame or Column or int) not '{type(expr).__name__}'"
 
+        # Index into an item
         if isinstance(expr, int):
             c_expr = ast.Subscript(
                 value=ast_DataFrame(self),
                 slice=ast.Index(value=expr)
             )
             return DataFrame(expr=c_expr)
+
+        # A branch look up - like a ".pt" rather than ['pt']
+        if isinstance(expr, str):
+            return self.__getattr__(expr)
 
         if callable(expr) and not (isinstance(expr, DataFrame) or isinstance(expr, Column)):
             c_expr = expr(self)
