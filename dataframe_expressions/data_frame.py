@@ -317,14 +317,15 @@ class DataFrame:
                                   comparators=[other_ast])
         return Column(type(bool), compare_ast)
 
-    def __binary_operator(self, operator: ast.AST, other: Any) -> DataFrame:
+    def __binary_operator(self, left: Any, operator: ast.AST, right: Any) -> DataFrame:
         '''Build a column for a binary operation that results in a column of single values.'''
 
         # How we do this depends on what other is. We need to encode whatever it is in the AST
         # so that it can be properly unpacked.
         from .utils import _term_to_ast
-        other_ast = _term_to_ast(other, self)
-        operated = ast.BinOp(left=ast_DataFrame(self), op=operator, right=other_ast)
+        left_ast = _term_to_ast(left, self)
+        right_ast = _term_to_ast(right, self)
+        operated = ast.BinOp(left=left_ast, op=operator, right=right_ast)
         return DataFrame(operated)
 
     def __lt__(self, other) -> Column:
@@ -359,16 +360,34 @@ class DataFrame:
 
     def __truediv__(self, other) -> DataFrame:
         self._test_for_extension('operator truediv')
-        return self.__binary_operator(ast.Div(), other)
+        return self.__binary_operator(self, ast.Div(), other)
+
+    def __rtruediv__(self, other) -> DataFrame:
+        self._test_for_extension('operator truediv')
+        return self.__binary_operator(other, ast.Div(), self)
 
     def __mul__(self, other) -> DataFrame:
         self._test_for_extension('operator mul')
-        return self.__binary_operator(ast.Mult(), other)
+        return self.__binary_operator(self, ast.Mult(), other)
+
+    def __rmul__(self, other) -> DataFrame:
+        self._test_for_extension('operator mul')
+        # It doesn't matter, but it helps with reading output code.
+        return self.__binary_operator(other, ast.Mult(), self)
 
     def __add__(self, other) -> DataFrame:
         self._test_for_extension('operator add')
-        return self.__binary_operator(ast.Add(), other)
+        return self.__binary_operator(self, ast.Add(), other)
+
+    def __radd__(self, other) -> DataFrame:
+        # It doesn't matter, but it helps with reading output code.
+        self._test_for_extension('operator add')
+        return self.__binary_operator(other, ast.Add(), self)
 
     def __sub__(self, other) -> DataFrame:
         self._test_for_extension('operator sub')
-        return self.__binary_operator(ast.Sub(), other)
+        return self.__binary_operator(self, ast.Sub(), other)
+
+    def __rsub__(self, other) -> DataFrame:
+        self._test_for_extension('operator sub')
+        return self.__binary_operator(other, ast.Sub(), self)

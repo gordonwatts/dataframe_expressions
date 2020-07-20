@@ -30,13 +30,21 @@ d1 = d[dx > 10]
 d2 = d1[d1.x < 20]
 ```
 
-And `d2` will be identical to d1 of the last example.
+And `d2` will be identical to d1 of the last example. You can also reverse the order, for example:
+
+```python
+d1 = d[10 < dx]
+```
+
+The system will actually render the mask expression as `dx > 10` (as per math and python rules).
 
 The basic 4 binary math operators work as well
 
 ```python
 d1 = d.x/1000.0
 ```
+
+They also work as expected if reversed, in case you were worried about that (e.g. `1000.0/d.x`).
 
 Extension functions are supported:
 
