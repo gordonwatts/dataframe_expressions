@@ -41,6 +41,61 @@ def test_lambda_for_computed_col():
     assert expr_2.left.value is a
 
 
+def test_computed_col_def_updated():
+    df = DataFrame()
+    df.jets['ptgev'] = lambda j: j.pt / 1000
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    assert isinstance(expr_1, ast.Call)
+    assert isinstance(expr_1.func, ast_Callable)
+    assert len(expr_1.args) == 1
+
+    expr_2, _ = render_callable(expr_1.func, context_1, expr_1.func.dataframe)  # type: ignore
+
+    # Run the render again.
+    df.jets['ptgev'] = lambda j: j.pt / 1001
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    assert isinstance(expr_1, ast.Call)
+    assert isinstance(expr_1.func, ast_Callable)
+    assert len(expr_1.args) == 1
+
+    expr_2, _ = render_callable(expr_1.func, context_1, expr_1.func.dataframe)  # type: ignore
+
+
+def test_computed_reference():
+    df = DataFrame()
+    df.jets['ptgev'] = df.jets.pt / 1000
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    assert isinstance(expr_1, ast.BinOp)
+    assert isinstance(expr_1.left, ast.Attribute)
+    assert isinstance(expr_1.right, ast.Num)
+
+
+def test_computed_reference_updated():
+    df = DataFrame()
+    df.jets['ptgev'] = df.jets.pt / 1000
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    df.jets['ptgev'] = df.jets.pt / 1001
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    assert isinstance(expr_1, ast.BinOp)
+    assert isinstance(expr_1.left, ast.Attribute)
+    assert isinstance(expr_1.right, ast.Num)
+
+
 def test_different_callables_look_different():
     # This is returning a recursive reference sometimes, due to a bug (every ast_Callable
     # looked the same).
