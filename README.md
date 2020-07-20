@@ -67,6 +67,16 @@ d1 = abs(d.x)
 
 Internally, this is rendered as `d.x.sin()`. The `numpy` functions are translated directly into calls like this - it is up to whatever backend you have to actually implement them. For the complete list of `numpy` functions, see the [`numpy` math page](https://numpy.org/doc/stable/reference/routines.math.html).
 
+Finally, other `numpy` functions - `array_functions` are also translated. For example:
+
+```python
+h = np.histogram(d.x, bins=50, range=(-0.5,10))
+```
+
+creates a `DataFrame` which makes a call to the `np_histogram` function. A backend can then implement that function.
+
+One of the most useful extra expressions in a functional language is the `if-then-else` expression. In python this is `a if a > b else b`. Unfortunately, due to the way the python interpreter works, we can't use this directly with `DataFrame`s. Instead, we can use the `np.where` 3-argument function. `np.where(<test>, <test-true-result>, <test-false-result>)` - and the nice thing about `dataframe_expressions` is that the true and false results are not calculated unless they are needed (unlike true `numpy`). See the [`numpy.where` documentation](https://numpy.org/doc/stable/reference/generated/numpy.where.html) for further details. Support, of course, is dependent on the backend.
+
 ## Lambda functions and captured variables
 
 It is possible to use lambda's that capture variables, allowing combinations of objects. For example:

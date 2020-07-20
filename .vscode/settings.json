@@ -13,6 +13,7 @@
         "dfattr",
         "dfattrattr",
         "eles",
+        "elts",
         "firstlineno",
         "funcs",
         "inuse",

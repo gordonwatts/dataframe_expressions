@@ -98,28 +98,34 @@ def parse_ast(a: Optional[ast.AST], context: var_context) -> List[str]:
             arg_list_str = ','.join(arg_list)
             return arg_list_str
 
+        def _resolve_kwargs(self, kw: List[ast.keyword]) -> str:
+            kw_list = []
+            for k in kw:
+                self.visit(k.value)
+                kw_list.append((k.arg, context.lookup(k.value)))
+            return ','.join(f'{k_a}={k_v}' for k_a, k_v in kw_list)
+
         def visit_Call(self, node: ast.Call):
             if isinstance(node.func, ast.Attribute):
                 self.visit(node.func.value)
-                arg_list_str = self._resolve_args(node.args)
-                nonlocal result
-                result.append(f'{context.new_df(node)} = '
-                              f'{context.lookup(node.func.value)}'
-                              f'.{node.func.attr}({arg_list_str})')
+                name = f'{context.lookup(node.func.value)}.{node.func.attr}'
             elif isinstance(node.func, ast_FunctionPlaceholder):
-                arg_list_str = self._resolve_args(node.args)
-                result.append(f'{context.new_df(node)} = '
-                              f'{node.func.name}'  # type: ignore
-                              f'({arg_list_str})')
+                name = node.func.name  # type: ignore
             elif isinstance(node.func, ast_Callable):
                 sig = self._get_callable_sig(node.func.callable)  # type: ignore
-                arg_list_str = self._resolve_args(node.args)
-                result.append(f'{context.new_df(node)} = '
-                              f'<{sig}>'  # type: ignore
-                              f'({arg_list_str})')
-
+                name = f'<{sig}>'
+            elif isinstance(node.func, ast.Name):
+                name = node.func.id
             else:
                 raise Exception(f'Do not know how to translate call to {node.func}')
+
+            # The arguments
+            position_arg_list_str = self._resolve_args(node.args)
+            kw_list_str = self._resolve_kwargs(node.keywords) if hasattr(node, 'keywords') else ""
+            arg_list_str = \
+                ','.join([a for a in [position_arg_list_str, kw_list_str] if len(a) > 0])
+
+            result.append(f'{context.new_df(node)} = {name}({arg_list_str})')
 
         def _get_callable_sig(self, c: Callable):
             s = inspect.signature(c)
@@ -168,6 +174,20 @@ def parse_ast(a: Optional[ast.AST], context: var_context) -> List[str]:
 
         def visit_Str(self, node: ast.Str):
             context.define_df(node, f"'{str(node.s)}'")
+
+        def visit_Tuple(self, node: ast.Tuple):
+            for n in node.elts:
+                self.visit(n)
+            s = [context.lookup(n) for n in node.elts]
+            tuple_text = ','.join(s)
+            context.define_df(node, f'({tuple_text})')
+
+        def visit_List(self, node: ast.List):
+            for n in node.elts:
+                self.visit(n)
+            s = [context.lookup(n) for n in node.elts]
+            tuple_text = ','.join(s)
+            context.define_df(node, f'[{tuple_text}]')
 
     if a is not None:
         ast_traverser().visit(a)
