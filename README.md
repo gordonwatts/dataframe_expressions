@@ -217,22 +217,26 @@ The aliases can reference each other (though no recursion is allowed), so fairly
 
 While the above shows you want the library can track, it says nothing about how you use it. The following steps are necessary.
 
-1. Subclass `dataframe_expressions.DataFrame` with your class. Make sure you initialize the `DataFrame` sub class. However, no need to pass any arguments. For this discussion lets call this `MyDF`
+1. Subclass `dataframe_expressions.DataFrame` with your library to create a "source" dataframe. For example, it could refer to a file, or a network endpoint the supplies data. Make sure you initialize the `DataFrame` sub class by calling its `__init__` method. However, no need to pass any arguments. For this discussion lets call this `MyDF`
 
 1. Users build expression as you would expect, `df = MyDF(...)`, and `df1 = df.jets[df.jets.pt > 10]`
 
-1. Users trigger rendering of the expression in your library in some way that makes sense, `get_data(df1)`
+1. Users trigger rendering of the expression in your library in some way that makes sense, `get_data(df1)` for example, where you must supply the `get_data` method.
 
-1. When you get control with the top level `DataFrame` expression, you can now do the following to render it:
+1. When you get control with the `DataFrame` expression the user wants rendered, you can now do the following to render it:
 
 ```python
 from dataframe_expressions import render
-expression = render(df1)
+expression, context = render(df1)
 ```
 
-`expression` is an `ast.AST` that describes what is being looked at (e.g. `df.jets.pt`). If the expression is something like `df.jets.pt` then the ast is a chain of python `ast.Attribute` nodes, and the bottom one will be a special `ast_Dataframe` object that contains a member `dataframe` which points to your original sub-classed `MyDF`.
+`expression` is an `ast.AST` that describes what is being looked at. If the expression is `df.jets.pt` then the ast is a chain of python `ast.Attribute` nodes, and the bottom one will be a special `ast_Dataframe` object that contains a member `DataFrame` which points to your original sub-classed `MyDF`. You can tell it is the _special_ `DataFrame` because it will have no children.
 
-If there are filters, there is another special ast object you need to be able to process, `ast_Filter`. For example, `df[df.met > 50].jets.pt`, will have `expression` starting with two `ast.Attribute` nodes, followed by a `ast_Filter` node. There are two members there, one is `expr` and in this case it will contain the `df`, or the `ast_Dataframe` that points to `df`. The second member is `filter` which points to an expression that is the filter. It should evaluate to true or false. As long as there is repeated phrase, like `df` in `df[df.met > 50].jets.pt` or `df.jets` in `df.jets[df.jets.count() == 2]`, they will point to the same `ast.AST` object - so you can use that in walking the tree to recognize the same expression(s).
+If there are filters, there is another special ast object you need to be able to process: `ast_Filter`. For example, `df[df.met > 50].jets.pt`, will have expression starting with two `ast.Attribute` nodes for the `jets.pt` attributes, followed by a `ast_Filter` node. The `ast_Filter` object has one expression, `filter`, which points to an expression that is the filter. It should evaluate to true or false.  The second member points to the `DataFrame` it is filtering - in this case `MyDF`. As long as there is repeated phrase, like `df` in `df[df.met > 50].jets.pt` or `df.jets` in `df.jets[df.jets.count() == 2]`, they will point to the same `ast_DataFrame` object - so you can use that in walking the tree to recognize common sub-expressions expression(s).
+
+There is one last trick: `lambda` functions. `dataframe_expressions` can't evaluate the lambda functions without knowing more about the user's intent: so evaluating them must be triggered by your library. The lambda functions are represented by an `ast_Callable` object. When you do encounter them, you can render them into the same `ast.AST` like form by calling `render_callable` and passing the context along with the `ast_Callable` and any arguments to pass to the `lambda`.
+
+To see how this works, see packages like `hep_tables` and `hl_tables`.
 
 ## Helpers
 
