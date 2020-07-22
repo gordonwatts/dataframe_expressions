@@ -1,7 +1,7 @@
 from __future__ import annotations
 import ast
 import logging
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, cast
 
 from .asts import ast_Callable, ast_DataFrame
 from .utils_ast import CloningNodeTransformer
@@ -246,9 +246,8 @@ class DataFrame:
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs) -> Any:
         '''Take over a numpy or similar execution by turning it into a function call'''
-        visitor = getattr(self, ufunc.__name__, None)
-        assert visitor is not None, f'Unable to call function "{ufunc.__name__}" on dataframe.'
-        return visitor(*inputs[1:], **kwargs)
+        func = ast.Name(id=ufunc.__name__, ctx=ast.Load())
+        return self.call_func(func, ast_DataFrame(self), inputs, kwargs)
 
     def __array_function__(self, func, types, args, kwargs):
         '''Generate a function call to a numpy array function (`where`, `histogram`, etc).
@@ -285,11 +284,14 @@ class DataFrame:
             'Cannot call a DataFrame directly - must be a function name!'
         assert isinstance(self.child_expr, ast.Attribute), \
             'Cannot call a DataFrame directly - must be a function name!'
-        from .utils import _term_to_ast
         assert isinstance(self.child_expr, ast.Attribute)
         assert isinstance(self.child_expr.value, ast_DataFrame)
         base_df = cast(ast_DataFrame, self.child_expr.value)
-        child_expr = ast.Call(func=self.child_expr,
+        return self.call_func(self.child_expr, base_df, inputs, kwargs)
+
+    def call_func(self, func, base_df: ast_DataFrame, inputs: Iterable[Any], kwargs: Dict[str, Any]):
+        from .utils import _term_to_ast
+        child_expr = ast.Call(func=func,
                               args=[_term_to_ast(a, base_df.dataframe) for a in inputs],
                               keywords=[ast.keyword(arg=k, value=_term_to_ast(v, self))
                                         for k, v in kwargs.items()])
@@ -305,10 +307,8 @@ class DataFrame:
         Take the absolute value of ourselves using the python default syntax.
         '''
         self._test_for_extension('abs')
-        child_expr = ast.Call(func=ast.Attribute(value=ast_DataFrame(self),
-                                                 attr='abs', ctx=ast.Load()),
-                              args=[], keywords=[])
-        return DataFrame(expr=child_expr)
+        return self.call_func(ast.Name(id='abs', ctx=ast.Load()), ast_DataFrame(self),
+                                       [self], {})
 
     def __invert__(self) -> DataFrame:
         ''' Invert, or logical NOT operation. '''
