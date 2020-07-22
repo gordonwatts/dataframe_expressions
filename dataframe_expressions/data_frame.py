@@ -289,7 +289,8 @@ class DataFrame:
         base_df = cast(ast_DataFrame, self.child_expr.value)
         return self.call_func(self.child_expr, base_df, inputs, kwargs)
 
-    def call_func(self, func, base_df: ast_DataFrame, inputs: Iterable[Any], kwargs: Dict[str, Any]):
+    def call_func(self, func, base_df: ast_DataFrame, inputs: Iterable[Any],
+                  kwargs: Dict[str, Any]):
         from .utils import _term_to_ast
         child_expr = ast.Call(func=func,
                               args=[_term_to_ast(a, base_df.dataframe) for a in inputs],
@@ -308,7 +309,7 @@ class DataFrame:
         '''
         self._test_for_extension('abs')
         return self.call_func(ast.Name(id='abs', ctx=ast.Load()), ast_DataFrame(self),
-                                       [self], {})
+                              [self], {})
 
     def __invert__(self) -> DataFrame:
         ''' Invert, or logical NOT operation. '''

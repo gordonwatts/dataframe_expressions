@@ -132,6 +132,7 @@ def parse_ast(a: Optional[ast.AST], context: var_context) -> List[str]:
             return f'{c.__name__}{s}'
 
         def visit_ast_Callable(self, node: ast_Callable):
+            assert node.callable is not None
             result.append(f'{context.new_df(node)} = {self._get_callable_sig(node.callable)}')
 
         def visit_Attribute(self, node: ast.Attribute):

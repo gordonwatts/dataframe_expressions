@@ -155,7 +155,7 @@ def test_python_builtin_function():
 
     assert '\n'.join(r) == '''df_1 = DataFrame()
 df_2 = df_1.x
-df_3 = df_2.abs()'''
+df_3 = abs(df_2)'''
 
 
 def test_python_other_function():
