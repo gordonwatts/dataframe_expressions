@@ -218,7 +218,7 @@ def test_np_sin():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == \
-        "Call(func=Attribute(value=ast_DataFrame(), attr='sin', ctx=Load()), args=[], keywords=[])"
+        "Call(func=Name(id='sin', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
 
 
 def test_python_abs():
@@ -227,7 +227,7 @@ def test_python_abs():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == \
-        "Call(func=Attribute(value=ast_DataFrame(), attr='abs', ctx=Load()), args=[], keywords=[])"
+        "Call(func=Name(id='abs', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
 
 
 def test_np_sin_kwargs():
@@ -237,7 +237,7 @@ def test_np_sin_kwargs():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == \
-        "Call(func=Attribute(value=ast_DataFrame(), attr='sin', ctx=Load()), args=[], "\
+        "Call(func=Name(id='sin', ctx=Load()), args=[ast_DataFrame()], " \
         "keywords=[keyword(arg='bogus', value=Num(n=22.0))])"
 
 
@@ -248,8 +248,8 @@ def test_np_arctan2_with_args():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == \
-        "Call(func=Attribute(value=ast_DataFrame(), attr='arctan2', ctx=Load()), " \
-        "args=[Num(n=100.0)], keywords=[])"
+        "Call(func=Name(id='arctan2', ctx=Load()), args=[ast_DataFrame(), " \
+        "Num(n=100.0)], keywords=[])"
 
 
 def test_np_func_with_division():
@@ -261,7 +261,7 @@ def test_np_func_with_division():
     assert '\n'.join(dumps(f1)) == '''df_1 = DataFrame()
 df_2 = df_1 - 1.0
 df_3 = 1.0 / df_2
-df_4 = df_3.log10()'''
+df_4 = log10(df_3)'''
 
 
 def test_np_func_where():
