@@ -13,20 +13,33 @@
         "dfattr",
         "dfattrattr",
         "eles",
+        "elts",
         "firstlineno",
         "funcs",
+        "getenv",
         "inuse",
         "jetpt",
         "mult",
         "nogood",
         "numpy",
         "obj's",
+        "prereleased",
         "ptgev",
+        "pypa",
+        "pypi",
         "pytest",
         "reco",
+        "rmul",
+        "rsub",
+        "rtruediv",
+        "sdist",
         "setuptools",
         "subexpr",
         "ufunc",
         "unittests"
-    ]
+    ],
+    "python.testing.pytestArgs": [
+        "--no-cov"
+    ],
+    "python.analysis.typeCheckingMode": "basic"
 }

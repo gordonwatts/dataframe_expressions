@@ -1,7 +1,7 @@
 from __future__ import annotations
 import ast
 import logging
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, cast
 
 from .asts import ast_Callable, ast_DataFrame
 from .utils_ast import CloningNodeTransformer
@@ -195,18 +195,23 @@ class DataFrame:
             self._sub_df[name] = _sub_link_info(result, False)
         return self._sub_df[name].render(self)
 
-    def __getitem__(self, expr: Union[Callable, DataFrame, Column, int]) -> DataFrame:
-        '''A filtering operation of some sort'''
-        assert isinstance(expr, (DataFrame, Column, int)) or callable(expr), \
+    def __getitem__(self, expr: Union[Callable, DataFrame, Column, str, int]) -> DataFrame:
+        '''A filtering operation of some sort or a branch look up or a slice'''
+        assert isinstance(expr, (DataFrame, Column, int, str)) or callable(expr), \
             "Filtering a data frame must be done by a DataFrame expression " \
             f"(type: DataFrame or Column or int) not '{type(expr).__name__}'"
 
+        # Index into an item
         if isinstance(expr, int):
             c_expr = ast.Subscript(
                 value=ast_DataFrame(self),
                 slice=ast.Index(value=expr)
             )
             return DataFrame(expr=c_expr)
+
+        # A branch look up - like a ".pt" rather than ['pt']
+        if isinstance(expr, str):
+            return self.__getattr__(expr)
 
         if callable(expr) and not (isinstance(expr, DataFrame) or isinstance(expr, Column)):
             c_expr = expr(self)
@@ -234,16 +239,39 @@ class DataFrame:
             if not self._sub_df[key].computed_col:
                 raise Exception(f'You may not redefine "{key}".')
             else:
-                logging.getLogger(__name__).warning('')
+                logging.getLogger(__name__).warning(f'Redefinition of DataFrame item "{key}"')
 
         self._sub_df[key] = _sub_link_info(expr, True)
         return self
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs) -> Any:
         '''Take over a numpy or similar execution by turning it into a function call'''
-        visitor = getattr(self, ufunc.__name__, None)
-        assert visitor is not None, f'Unable to call function "{ufunc.__name__}" on dataframe.'
-        return visitor(*inputs[1:], **kwargs)
+        func = ast.Name(id=ufunc.__name__, ctx=ast.Load())
+        return self.call_func(func, ast_DataFrame(self), inputs, kwargs)
+
+    def __array_function__(self, func, types, args, kwargs):
+        '''Generate a function call to a numpy array function (`where`, `histogram`, etc).
+
+        Args:
+            func (Callable): Built in numpy function that was called
+            types (Tuple): List of the types of arguments
+            args (Tuple): Each argument passed to the function
+            kwargs (Dict): All keyword arguments passed to the function
+
+        Returns:
+            DataFrame: DataFrame representing the call
+
+        Notes:
+            Protocol is based off
+            (NEP-18)[https://numpy.org/neps/nep-0018-array-function-protocol.html]
+        '''
+        from .utils import _term_to_ast
+        function = ast.Name(id=f'np_{func.__name__}', ctx=ast.Load())
+        child_expr = ast.Call(func=function,
+                              args=[_term_to_ast(a, self) for a in args],
+                              keywords=[ast.keyword(arg=k, value=_term_to_ast(v, self))
+                                        for k, v in kwargs.items()])
+        return DataFrame(child_expr)
 
     def __call__(self, *inputs, **kwargs) -> DataFrame:
         '''
@@ -256,11 +284,15 @@ class DataFrame:
             'Cannot call a DataFrame directly - must be a function name!'
         assert isinstance(self.child_expr, ast.Attribute), \
             'Cannot call a DataFrame directly - must be a function name!'
-        from .utils import _term_to_ast
         assert isinstance(self.child_expr, ast.Attribute)
         assert isinstance(self.child_expr.value, ast_DataFrame)
         base_df = cast(ast_DataFrame, self.child_expr.value)
-        child_expr = ast.Call(func=self.child_expr,
+        return self.call_func(self.child_expr, base_df, inputs, kwargs)
+
+    def call_func(self, func, base_df: ast_DataFrame, inputs: Iterable[Any],
+                  kwargs: Dict[str, Any]):
+        from .utils import _term_to_ast
+        child_expr = ast.Call(func=func,
                               args=[_term_to_ast(a, base_df.dataframe) for a in inputs],
                               keywords=[ast.keyword(arg=k, value=_term_to_ast(v, self))
                                         for k, v in kwargs.items()])
@@ -276,10 +308,8 @@ class DataFrame:
         Take the absolute value of ourselves using the python default syntax.
         '''
         self._test_for_extension('abs')
-        child_expr = ast.Call(func=ast.Attribute(value=ast_DataFrame(self),
-                                                 attr='abs', ctx=ast.Load()),
-                              args=[], keywords=[])
-        return DataFrame(expr=child_expr)
+        return self.call_func(ast.Name(id='abs', ctx=ast.Load()), ast_DataFrame(self),
+                              [self], {})
 
     def __invert__(self) -> DataFrame:
         ''' Invert, or logical NOT operation. '''
@@ -312,14 +342,15 @@ class DataFrame:
                                   comparators=[other_ast])
         return Column(type(bool), compare_ast)
 
-    def __binary_operator(self, operator: ast.AST, other: Any) -> DataFrame:
+    def __binary_operator(self, left: Any, operator: ast.AST, right: Any) -> DataFrame:
         '''Build a column for a binary operation that results in a column of single values.'''
 
         # How we do this depends on what other is. We need to encode whatever it is in the AST
         # so that it can be properly unpacked.
         from .utils import _term_to_ast
-        other_ast = _term_to_ast(other, self)
-        operated = ast.BinOp(left=ast_DataFrame(self), op=operator, right=other_ast)
+        left_ast = _term_to_ast(left, self)
+        right_ast = _term_to_ast(right, self)
+        operated = ast.BinOp(left=left_ast, op=operator, right=right_ast)
         return DataFrame(operated)
 
     def __lt__(self, other) -> Column:
@@ -354,16 +385,34 @@ class DataFrame:
 
     def __truediv__(self, other) -> DataFrame:
         self._test_for_extension('operator truediv')
-        return self.__binary_operator(ast.Div(), other)
+        return self.__binary_operator(self, ast.Div(), other)
+
+    def __rtruediv__(self, other) -> DataFrame:
+        self._test_for_extension('operator truediv')
+        return self.__binary_operator(other, ast.Div(), self)
 
     def __mul__(self, other) -> DataFrame:
         self._test_for_extension('operator mul')
-        return self.__binary_operator(ast.Mult(), other)
+        return self.__binary_operator(self, ast.Mult(), other)
+
+    def __rmul__(self, other) -> DataFrame:
+        self._test_for_extension('operator mul')
+        # It doesn't matter, but it helps with reading output code.
+        return self.__binary_operator(other, ast.Mult(), self)
 
     def __add__(self, other) -> DataFrame:
         self._test_for_extension('operator add')
-        return self.__binary_operator(ast.Add(), other)
+        return self.__binary_operator(self, ast.Add(), other)
+
+    def __radd__(self, other) -> DataFrame:
+        # It doesn't matter, but it helps with reading output code.
+        self._test_for_extension('operator add')
+        return self.__binary_operator(other, ast.Add(), self)
 
     def __sub__(self, other) -> DataFrame:
         self._test_for_extension('operator sub')
-        return self.__binary_operator(ast.Sub(), other)
+        return self.__binary_operator(self, ast.Sub(), other)
+
+    def __rsub__(self, other) -> DataFrame:
+        self._test_for_extension('operator sub')
+        return self.__binary_operator(other, ast.Sub(), self)

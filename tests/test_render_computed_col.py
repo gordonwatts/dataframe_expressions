@@ -1,9 +1,8 @@
 import ast
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
-from dataframe_expressions import (
-    DataFrame, ast_Callable, render, render_context,
-    render_callable, user_func)
+from dataframe_expressions import (DataFrame, ast_Callable, render,
+                                   render_callable, render_context, user_func)
 
 
 class find_callable(ast.NodeVisitor):
@@ -42,6 +41,61 @@ def test_lambda_for_computed_col():
     assert expr_2.left.value is a
 
 
+def test_computed_col_def_updated():
+    df = DataFrame()
+    df.jets['ptgev'] = lambda j: j.pt / 1000
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    assert isinstance(expr_1, ast.Call)
+    assert isinstance(expr_1.func, ast_Callable)
+    assert len(expr_1.args) == 1
+
+    expr_2, _ = render_callable(expr_1.func, context_1, expr_1.func.dataframe)  # type: ignore
+
+    # Run the render again.
+    df.jets['ptgev'] = lambda j: j.pt / 1001
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    assert isinstance(expr_1, ast.Call)
+    assert isinstance(expr_1.func, ast_Callable)
+    assert len(expr_1.args) == 1
+
+    expr_2, _ = render_callable(expr_1.func, context_1, expr_1.func.dataframe)  # type: ignore
+
+
+def test_computed_reference():
+    df = DataFrame()
+    df.jets['ptgev'] = df.jets.pt / 1000
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    assert isinstance(expr_1, ast.BinOp)
+    assert isinstance(expr_1.left, ast.Attribute)
+    assert isinstance(expr_1.right, ast.Num)
+
+
+def test_computed_reference_updated():
+    df = DataFrame()
+    df.jets['ptgev'] = df.jets.pt / 1000
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    df.jets['ptgev'] = df.jets.pt / 1001
+    d1 = df.jets.ptgev
+
+    expr_1, context_1 = render(d1)
+
+    assert isinstance(expr_1, ast.BinOp)
+    assert isinstance(expr_1.left, ast.Attribute)
+    assert isinstance(expr_1.right, ast.Num)
+
+
 def test_different_callables_look_different():
     # This is returning a recursive reference sometimes, due to a bug (every ast_Callable
     # looked the same).
@@ -50,7 +104,8 @@ def test_different_callables_look_different():
     mc_part = df.TruthParticles('TruthParticles')
     eles = df.Electrons('Electrons')
 
-    # This gives us a list of events, and in each event, good electrons, and then for each good electron, all good MC electrons that are near by
+    # This gives us a list of events, and in each event, good electrons, and then for each good
+    # electron, all good MC electrons that are near by
     eles['near_mcs'] = lambda reco_e: mc_part
     eles['hasMC'] = lambda e: e.near_mcs.Count() > 0
 
@@ -78,7 +133,8 @@ def test_second_dr_returns_filtered():
     eles = df.Electrons('Electrons')
 
     def dr(e, mc):
-        'Make calculating DR easier as I have a hard-to-use DR calculation function on the back end'
+        '''Make calculating DR easier as I have a hard-to-use DR calculation function on
+        the back end'''
         return DeltaR(e.eta())
 
     def very_near2(mcs, e):
@@ -107,7 +163,8 @@ def test_second_dr_returns_filtered():
             assert len(a.args) == 1
             # arg = self.visit(a.args[0])
 
-            expr, new_context = render_callable(a.func, self._context, a.func.dataframe)  # type: ignore
+            expr, new_context = render_callable(cast(ast_Callable, a.func),
+                                                self._context, a.func.dataframe)  # type: ignore
             old_context = self._context
             try:
                 self._context = new_context

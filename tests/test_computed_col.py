@@ -18,6 +18,15 @@ def test_create_col_with_text():
     assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1000))"
 
 
+def test_create_col_access_with_text():
+    df = DataFrame()
+    df.jets['ptgev'] = df.jets.pt / 1000
+    d1 = df.jets['ptgev']
+
+    assert d1.child_expr is not None
+    assert ast.dump(d1.child_expr) == "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1000))"
+
+
 def test_create_col_twice():
     df = DataFrame()
     df.jets['ptgev'] = df.jets.pt / 1000.0
@@ -48,13 +57,15 @@ def test_create_col_with_text_filtered():
     assert isinstance(d1.child_expr.left, ast_DataFrame)
     d1_parent = cast(ast_DataFrame, d1.child_expr.left).dataframe
     assert d1_parent.child_expr is not None
-    assert ast.dump(d1_parent.child_expr) == "Attribute(value=ast_DataFrame(), attr='pt', ctx=Load())"
+    assert ast.dump(d1_parent.child_expr) \
+        == "Attribute(value=ast_DataFrame(), attr='pt', ctx=Load())"
     assert isinstance(d1_parent.child_expr, ast.Attribute)
     assert isinstance(d1_parent.child_expr.value, ast_DataFrame)
     p_df = cast(ast_DataFrame, d1_parent.child_expr.value).dataframe
     assert isinstance(p_df.child_expr, ast_DataFrame)
     assert p_df.filter is not None
-    assert ast.dump(p_df.filter.child_expr) == "Compare(left=ast_DataFrame(), ops=[Lt()], comparators=[Num(n=2.4)])"
+    assert ast.dump(p_df.filter.child_expr) \
+        == "Compare(left=ast_DataFrame(), ops=[Lt()], comparators=[Num(n=2.4)])"
 
 
 def test_create_col_yuck_doesnot_track():
@@ -115,6 +126,13 @@ def test_create_col_with_lambda():
     assert cast(ast_Callable, d1.child_expr.func).dataframe is p
 
 
+def test_create_col_with_lambda_twice():
+    df = DataFrame()
+    df.jets['ptgev'] = lambda j: j.pt / 1000
+    df.jets['ptgev'] = lambda j: j.pt / 1001
+    _ = df.jets.ptgev
+
+
 def test_col_twice_nested():
     df = DataFrame()
     df.jets['ptgev'] = lambda j: j.pt / 1000.0
@@ -148,7 +166,8 @@ def test_nested_col_access():
     eles = df.Electrons('Electrons')
 
     def dr(e, mc):
-        'Make calculating DR easier as I have a hard-to-use DR calculation function on the back end'
+        '''Make calculating DR easier as I have a hard-to-use DR calculation function on the
+        back end'''
         return DeltaR(e.eta())
 
     def very_near2(mcs, e):

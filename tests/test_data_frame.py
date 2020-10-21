@@ -1,8 +1,10 @@
 import ast
-from typing import Optional, List, cast
+from typing import List, Optional, cast
 
-from dataframe_expressions import Column, DataFrame, ast_DataFrame, define_alias
-from dataframe_expressions import ast_Callable, ast_Column
+import pytest
+
+from dataframe_expressions import (
+    Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame, define_alias)
 
 from .utils_for_testing import reset_var_counter  # NOQA
 
@@ -46,20 +48,36 @@ def test_dataframe_attribute():
     assert ast.dump(ref.child_expr) == "Attribute(value=ast_DataFrame(), attr='x', ctx=Load())"
 
 
-def test_mask_operator_const_lt_const():
+@pytest.mark.parametrize("comp_op, ast_type", [
+    (lambda a, b: a < b, ast.Lt),
+    (lambda a, b: a <= b, ast.LtE),
+    (lambda a, b: a > b, ast.Gt),
+    (lambda a, b: a >= b, ast.GtE),
+    (lambda a, b: a == b, ast.Eq),
+    (lambda a, b: a != b, ast.NotEq),
+    (lambda b, a: a < b, ast.Gt),
+    (lambda b, a: a <= b, ast.GtE),
+    (lambda b, a: a > b, ast.Lt),
+    (lambda b, a: a >= b, ast.LtE),
+    (lambda b, a: a == b, ast.Eq),
+    (lambda b, a: a != b, ast.NotEq),
+])
+def test_mask_operator_with_const(comp_op, ast_type):
     d = DataFrame()
-    ref = d.x < 10
+    ref = comp_op(d.x, 10)
     assert isinstance(ref, Column)
     assert ref.type == type(bool)
-    assert ast.dump(ref.child_expr) == \
-        "Compare(left=ast_DataFrame(), ops=[Lt()], comparators=[Num(n=10)])"
     assert isinstance(ref.child_expr, ast.Compare)
-    df = ref.child_expr.left  # type: ast.AST
-    assert isinstance(df, ast_DataFrame)
-    parents = find_df(df.dataframe.child_expr)
-    assert len(parents) == 1
+    assert len(ref.child_expr.ops) == 1
+    assert len(ref.child_expr.comparators) == 1
 
-    assert parents[0].dataframe is d
+    left = ref.child_expr.left
+    right = ref.child_expr.comparators[0]
+
+    assert isinstance(left, ast_DataFrame)
+    assert isinstance(right, ast.Num)
+
+    assert isinstance(ref.child_expr.ops[0], ast_type)
 
 
 def test_mask_operator_2nd_dataframe():
@@ -75,41 +93,6 @@ def test_mask_operator_2nd_dataframe():
     parents = find_df(df.dataframe.child_expr)
     assert len(parents) == 1
     assert parents[0].dataframe is d
-
-
-def test_mask_operator_const_le():
-    d = DataFrame()
-    ref = d.x <= 10
-    assert ast.dump(ref.child_expr) == \
-        "Compare(left=ast_DataFrame(), ops=[LtE()], comparators=[Num(n=10)])"
-
-
-def test_mask_operator_const_gt():
-    d = DataFrame()
-    ref = d.x > 10
-    assert ast.dump(ref.child_expr) == \
-        "Compare(left=ast_DataFrame(), ops=[Gt()], comparators=[Num(n=10)])"
-
-
-def test_mask_operator_const_ge():
-    d = DataFrame()
-    ref = d.x >= 10
-    assert ast.dump(ref.child_expr) == \
-        "Compare(left=ast_DataFrame(), ops=[GtE()], comparators=[Num(n=10)])"
-
-
-def test_mask_operator_const_eq():
-    d = DataFrame()
-    ref = d.x == 10
-    assert ast.dump(ref.child_expr) == \
-        "Compare(left=ast_DataFrame(), ops=[Eq()], comparators=[Num(n=10)])"
-
-
-def test_mask_operator_const_ne():
-    d = DataFrame()
-    ref = d.x != 10
-    assert ast.dump(ref.child_expr) == \
-        "Compare(left=ast_DataFrame(), ops=[NotEq()], comparators=[Num(n=10)])"
 
 
 def test_mask_operator_and():
@@ -202,40 +185,30 @@ def test_slicing_df():
     assert d1.child_expr.slice.value == 10
 
 
-def test_math_division():
+@pytest.mark.parametrize("bin_op, ast_op, reverse", [
+    (lambda a, b: a + b, ast.Add, False),
+    (lambda a, b: a - b, ast.Sub, False),
+    (lambda a, b: a * b, ast.Mult, False),
+    (lambda a, b: a / b, ast.Div, False),
+    (lambda a, b: b + a, ast.Add, True),
+    (lambda a, b: b - a, ast.Sub, True),
+    (lambda a, b: b * a, ast.Mult, True),
+    (lambda a, b: b / a, ast.Div, True),
+    ])
+def test_binary_operators(bin_op, ast_op, reverse):
     d = DataFrame()
-    d1 = d.x/1000
+    d1 = bin_op(d.x, 1000)
     assert d1.filter is None
     assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == \
-        "BinOp(left=ast_DataFrame(), op=Div(), right=Num(n=1000))"
+    assert isinstance(d1.child_expr, ast.BinOp)
+    left = d1.child_expr.left
+    right = d1.child_expr.right
+    if reverse:
+        left, right = right, left
 
-
-def test_math_mult():
-    d = DataFrame()
-    d1 = d.x*1000
-    assert d1.filter is None
-    assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == \
-        "BinOp(left=ast_DataFrame(), op=Mult(), right=Num(n=1000))"
-
-
-def test_math_sub():
-    d = DataFrame()
-    d1 = d.x-1000
-    assert d1.filter is None
-    assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == \
-        "BinOp(left=ast_DataFrame(), op=Sub(), right=Num(n=1000))"
-
-
-def test_math_add():
-    d = DataFrame()
-    d1 = d.x+1000
-    assert d1.filter is None
-    assert d1.child_expr is not None
-    assert ast.dump(d1.child_expr) == \
-        "BinOp(left=ast_DataFrame(), op=Add(), right=Num(n=1000))"
+    assert ast.dump(left) == 'ast_DataFrame()'
+    assert ast.dump(right) == 'Num(n=1000)'
+    assert isinstance(d1.child_expr.op, ast_op)
 
 
 def test_np_sin():
@@ -245,7 +218,7 @@ def test_np_sin():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == \
-        "Call(func=Attribute(value=ast_DataFrame(), attr='sin', ctx=Load()), args=[], keywords=[])"
+        "Call(func=Name(id='sin', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
 
 
 def test_python_abs():
@@ -254,7 +227,7 @@ def test_python_abs():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == \
-        "Call(func=Attribute(value=ast_DataFrame(), attr='abs', ctx=Load()), args=[], keywords=[])"
+        "Call(func=Name(id='abs', ctx=Load()), args=[ast_DataFrame()], keywords=[])"
 
 
 def test_np_sin_kwargs():
@@ -264,7 +237,7 @@ def test_np_sin_kwargs():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == \
-        "Call(func=Attribute(value=ast_DataFrame(), attr='sin', ctx=Load()), args=[], "\
+        "Call(func=Name(id='sin', ctx=Load()), args=[ast_DataFrame()], " \
         "keywords=[keyword(arg='bogus', value=Num(n=22.0))])"
 
 
@@ -275,8 +248,44 @@ def test_np_arctan2_with_args():
     assert d1.filter is None
     assert d1.child_expr is not None
     assert ast.dump(d1.child_expr) == \
-        "Call(func=Attribute(value=ast_DataFrame(), attr='arctan2', ctx=Load()), " \
-        "args=[Num(n=100.0)], keywords=[])"
+        "Call(func=Name(id='arctan2', ctx=Load()), args=[ast_DataFrame(), " \
+        "Num(n=100.0)], keywords=[])"
+
+
+def test_np_func_with_division():
+    import numpy as np
+    d = DataFrame()
+    f1 = np.log10(1.0/(d-1.0))  # type: ignore
+
+    from dataframe_expressions import dumps
+    assert '\n'.join(dumps(f1)) == '''df_1 = DataFrame()
+df_2 = df_1 - 1.0
+df_3 = 1.0 / df_2
+df_4 = log10(df_3)'''
+
+
+def test_np_func_where():
+    import numpy as np
+    d = DataFrame()
+    f1 = np.where(d.x > 0, d.x, d.y)
+
+    from dataframe_expressions import dumps
+    assert '\n'.join(dumps(cast(DataFrame, f1))) == '''df_1 = DataFrame()
+df_2 = df_1.x
+df_3 = df_2 > 0
+df_4 = df_1.y
+df_5 = np_where(df_3,df_2,df_4)'''
+
+
+def test_np_func_histogram():
+    import numpy as np
+    d = DataFrame()
+    f1 = np.histogram(d.x, bins=50, range=(-0.5, 10.0))
+
+    from dataframe_expressions import dumps
+    assert '\n'.join(dumps(cast(DataFrame, f1))) == '''df_1 = DataFrame()
+df_2 = df_1.x
+df_3 = np_histogram(df_2,bins=50,range=(-0.5,10.0))'''
 
 
 def test_fluent_function_no_args():

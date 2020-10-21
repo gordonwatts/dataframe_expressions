@@ -1,17 +1,25 @@
 # Need setuptools even though it isn't used - loads some plugins.
 from setuptools import find_packages  # noqa: F401
 from distutils.core import setup
+import os
 
 # Use the readme as the long description.
 with open("README.md", "r") as fh:
     long_description = fh.read()
+
+
+version = os.getenv('dataframe_expressions_version')
+if version is None:
+    version = '0.1a1'
+else:
+    version = version.split('/')[-1]
 
 extras_require = {'test': ['pytest', 'pytest-asyncio', 'pytest-cov',
                            'flake8', 'coverage', 'twine', 'wheel', 'numpy']}
 extras_require['complete'] = sorted(set(sum(extras_require.values(), [])))
 
 setup(name="dataframe_expressions",
-      version='1.0.0',
+      version=version,
       packages=['dataframe_expressions'],
       scripts=[],
       description="Library to help with accumulating expressions",

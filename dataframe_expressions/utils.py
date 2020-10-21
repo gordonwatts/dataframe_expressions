@@ -1,9 +1,10 @@
 import ast
-from typing import Callable, Union, Optional, TypeVar
 import inspect
+from typing import Callable, Optional, TypeVar, Union, cast
 
 from dataframe_expressions import (
-    Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame, ast_FunctionPlaceholder)
+    Column, DataFrame, ast_Callable, ast_Column, ast_DataFrame,
+    ast_FunctionPlaceholder)
 
 
 class DataFrameTypeError(Exception):
@@ -36,6 +37,12 @@ def _term_to_ast(term: Union[int, str, DataFrame, Column, Callable],
             'Internal Error: Parent DF is required when creating a Callable'
         assert isinstance(parent_df, DataFrame)
         other_ast = ast_Callable(term, parent_df)
+    elif isinstance(term, tuple):
+        other_ast = ast.Tuple(
+            [_term_to_ast(item, parent_df) for item in cast(tuple, term)])
+    elif isinstance(term, list):
+        other_ast = ast.List(
+            [_term_to_ast(item, parent_df) for item in cast(list, term)])
     else:
         raise DataFrameTypeError("Do not know how to render a term "
                                  f"of type '{type(term).__name__}'.")

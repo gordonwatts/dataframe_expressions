@@ -30,13 +30,21 @@ d1 = d[dx > 10]
 d2 = d1[d1.x < 20]
 ```
 
-And `d2` will be identical to d1 of the last example.
+And `d2` will be identical to d1 of the last example. You can also reverse the order, for example:
+
+```python
+d1 = d[10 < dx]
+```
+
+The system will actually render the mask expression as `dx > 10` (as per math and python rules).
 
 The basic 4 binary math operators work as well
 
 ```python
 d1 = d.x/1000.0
 ```
+
+They also work as expected if reversed, in case you were worried about that (e.g. `1000.0/d.x`).
 
 Extension functions are supported:
 
@@ -57,7 +65,17 @@ as well as some python function:
 d1 = abs(d.x)
 ```
 
-Internally, this is rendered as `d.x.sin()`.
+Internally, this is rendered as `sin(d.x)`. The `numpy` functions are translated directly into calls like this - it is up to whatever backend you have to actually implement them. For the complete list of `numpy` functions, see the [`numpy` math page](https://numpy.org/doc/stable/reference/routines.math.html).
+
+Finally, other `numpy` functions - `array_functions` - are also translated. For example:
+
+```python
+h = np.histogram(d.x, bins=50, range=(-0.5,10))
+```
+
+creates a `DataFrame` which makes a call to the `np_histogram` function. A backend can then implement that function.
+
+One of the most useful extra expressions in a functional language is the `if-then-else` expression. In python this is `a if a > b else b`. Unfortunately, due to the way the python interpreter works, we can't use this directly with `DataFrame`s. Instead, we can use the `np.where` 3-argument function. `np.where(<test>, <test-true-result>, <test-false-result>)` - and the nice thing about `dataframe_expressions` is that the true and false results are not calculated unless they are needed (unlike true `numpy`). See the [`numpy.where` documentation](https://numpy.org/doc/stable/reference/generated/numpy.where.html) for further details. Support, of course, is dependent on the backend.
 
 ## Lambda functions and captured variables
 
@@ -154,6 +172,8 @@ jetpt_in_gev = df.jets[df.jets.ptgev > 30].ptgev
 
 The prototype implementation is particularly fragile - but that is due to poor design rather than a technical limitation.
 
+You can also refer to a leaf using a simple syntax. For example, `df.jets["ptgev"]` and `df.jets.ptgev` are the same on the right hand side of an expression. `df.xxx` and `df["xxx"]` are equivalent in all circumstances.
+
 ### Adding to the data model using objects
 
 Another way to do this is build an object. For example, lets say you want to make it easy to do 3-vector operations. You might write something like this:
@@ -207,22 +227,39 @@ The aliases can reference each other (though no recursion is allowed), so fairly
 
 While the above shows you want the library can track, it says nothing about how you use it. The following steps are necessary.
 
-1. Subclass `dataframe_expressions.DataFrame` with your class. Make sure you initialize the `DataFrame` sub class. However, no need to pass any arguments. For this discussion lets call this `MyDF`
+1. Subclass `dataframe_expressions.DataFrame` with your library to create a "source" dataframe. For example, it could refer to a file, or a network endpoint the supplies data. Make sure you initialize the `DataFrame` sub class by calling its `__init__` method. However, no need to pass any arguments. For this discussion lets call this `MyDF`
 
 1. Users build expression as you would expect, `df = MyDF(...)`, and `df1 = df.jets[df.jets.pt > 10]`
 
-1. Users trigger rendering of the expression in your library in some way that makes sense, `get_data(df1)`
+1. Users trigger rendering of the expression in your library in some way that makes sense, `get_data(df1)` for example, where you must supply the `get_data` method.
 
-1. When you get control with the top level `DataFrame` expression, you can now do the following to render it:
+1. When you get control with the `DataFrame` expression the user wants rendered, you can now do the following to render it:
 
 ```python
 from dataframe_expressions import render
-expression = render(df1)
+expression, context = render(df1)
 ```
 
-`expression` is an `ast.AST` that describes what is being looked at (e.g. `df.jets.pt`). If the expression is something like `df.jets.pt` then the ast is a chain of python `ast.Attribute` nodes, and the bottom one will be a special `ast_Dataframe` object that contains a member `dataframe` which points to your original sub-classed `MyDF`.
+`expression` is an `ast.AST` that describes what is being looked at. If the expression is `df.jets.pt` then the ast is a chain of python `ast.Attribute` nodes, and the bottom one will be a special `ast_Dataframe` object that contains a member `DataFrame` which points to your original sub-classed `MyDF`. You can tell it is the _special_ `DataFrame` because it will have no children.
 
-If there are filters, there is another special ast object you need to be able to process, `ast_Filter`. For example, `df[df.met > 50].jets.pt`, will have `expression` starting with two `ast.Attribute` nodes, followed by a `ast_Filter` node. There are two members there, one is `expr` and in this case it will contain the `df`, or the `ast_Dataframe` that points to `df`. The second member is `filter` which points to an expression that is the filter. It should evaluate to true or false. As long as there is repeated phrase, like `df` in `df[df.met > 50].jets.pt` or `df.jets` in `df.jets[df.jets.count() == 2]`, they will point to the same `ast.AST` object - so you can use that in walking the tree to recognize the same expression(s).
+If there are filters, there is another special ast object you need to be able to process: `ast_Filter`. For example, `df[df.met > 50].jets.pt`, will have expression starting with two `ast.Attribute` nodes for the `jets.pt` attributes, followed by a `ast_Filter` node. The `ast_Filter` object has one expression, `filter`, which points to an expression that is the filter. It should evaluate to true or false.  The second member points to the `DataFrame` it is filtering - in this case `MyDF`. As long as there is repeated phrase, like `df` in `df[df.met > 50].jets.pt` or `df.jets` in `df.jets[df.jets.count() == 2]`, they will point to the same `ast_DataFrame` object - so you can use that in walking the tree to recognize common sub-expressions expression(s).
+
+There is one last trick: `lambda` functions. `dataframe_expressions` can't evaluate the lambda functions without knowing more about the user's intent: so evaluating them must be triggered by your library. The lambda functions are represented by an `ast_Callable` object. When you do encounter them, you can render them into the same `ast.AST` like form by calling `render_callable` and passing the context along with the `ast_Callable` and any arguments to pass to the `lambda`.
+
+To see how this works, see packages like `hep_tables` and `hl_tables`.
+
+## Helpers
+
+The `dumps` function will dump a dataframe to a string. For the most part, the string will be correct python (lambda functions and other function routines are the only exception). This is useful for including in error text or in logging in libraries that make use of this library.
+
+The `dataframe_expressions` library makes use of the python `logging` library to dump expressions it is asked to render at the debug level. If you want to turn on just messages from this library the following code will dump debug level messages to stdout:
+
+```python
+import logging
+ch = logging.StreamHandler()
+logging.getLogger('dataframe_expressions').setLevel(logging.DEBUG)
+logging.getLogger('dataframe_expressions').addHandler(ch)
+```
 
 ## Technology Choices
 

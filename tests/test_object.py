@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 import ast
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 import pytest
 
-from dataframe_expressions import DataFrame, ast_DataFrame, exclusive_class, render
+from dataframe_expressions import (DataFrame, ast_DataFrame, exclusive_class,
+                                   render)
 
 from .utils_for_testing import reset_var_counter  # NOQA
 
@@ -175,10 +177,11 @@ def test_xy():
 
     expr, _ = render(df1)
     assert isinstance(expr, ast.Call)
-    assert isinstance(expr.func, ast.Attribute)
-    assert expr.func.attr == 'sqrt'
-    assert isinstance(expr.func.value, ast.BinOp)
-    assert isinstance(expr.func.value.op, ast.Add)
+    assert isinstance(expr.func, ast.Name)
+    assert expr.func.id == 'sqrt'
+    assert len(expr.args) == 1
+    assert isinstance(expr.args[0], ast.BinOp)
+    assert isinstance(cast(ast.BinOp, expr.args[0]).op, ast.Add)
 
 
 def test_add_xy():
@@ -189,12 +192,12 @@ def test_add_xy():
 
     expr, _ = render(df1)
     assert isinstance(expr, ast.Call)
-    assert isinstance(expr.func, ast.Attribute)
-    assert expr.func.attr == 'sqrt'
-    assert isinstance(expr.func.value, ast.BinOp)
-    assert isinstance(expr.func.value.op, ast.Add)
+    assert isinstance(expr.func, ast.Name)
+    assert expr.func.id == 'sqrt'
+    assert isinstance(expr.args[0], ast.BinOp)
+    assert isinstance(cast(ast.BinOp, expr.args[0]).op, ast.Add)
 
-    x_component2 = expr.func.value.left
+    x_component2 = cast(ast.BinOp, expr.args[0]).left
     assert isinstance(x_component2, ast.BinOp)
     assert isinstance(x_component2.op, ast.Mult)
 
