@@ -16,7 +16,7 @@ class ast_Filter (ast.AST):
 
     _fields = ('expr', 'filter')
 
-    def __init__(self, expr: ast.AST, filter: ast.AST):
+    def __init__(self, expr: Optional[ast.AST] = None, filter: Optional[ast.AST] = None):
         '''
         Create a filter expression.
 
