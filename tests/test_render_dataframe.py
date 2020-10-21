@@ -1,4 +1,5 @@
 import ast
+from dataframe_expressions.utils_ast import CloningNodeTransformer
 from typing import Optional
 
 import pytest
@@ -524,3 +525,13 @@ def test_render_callable_twice_for_same_results():
 #     finder = find_attr()
 #     finder.visit(expr)
 #     assert len(finder.found) == 2
+
+
+def test_copy_filter():
+    a = ast_Filter(expr=ast.Name(id='a'), filter=ast.Name(id='b'))
+
+    class do_copy(CloningNodeTransformer):
+        def visit_Name(self, node: ast.Name) -> ast.Name:
+            return ast.Name(id='c')
+
+    do_copy().visit(a)
