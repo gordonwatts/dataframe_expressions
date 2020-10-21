@@ -19,7 +19,7 @@ extras_require = {'test': ['pytest', 'pytest-asyncio', 'pytest-cov',
 extras_require['complete'] = sorted(set(sum(extras_require.values(), [])))
 
 setup(name="dataframe_expressions",
-      version='1.1.0b4',
+      version=version,
       packages=['dataframe_expressions'],
       scripts=[],
       description="Library to help with accumulating expressions",
